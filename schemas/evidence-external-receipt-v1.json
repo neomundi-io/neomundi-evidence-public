@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neomundi.io/schemas/evidence-external-receipt-v1.json",
+  "title": "NeoMundi Evidence external receipt, version 1",
+  "description": "A third party's receipt, NORMALISED AND NOT INTERPRETED. Values are verbatim; no correspondence with a NeoMundi field is assumed. An external receipt is a DECLARATION, never primary evidence, and carrying a self-computed digest does not change that. Un recu tiers, NORMALISE ET NON INTERPRETE. Les valeurs sont verbatim ; aucune correspondance avec un champ NeoMundi n'est supposee.",
+  "type": "object",
+  "required": [
+    "schema",
+    "source",
+    "fields",
+    "digests",
+    "signatures"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "neomundi.evidence.external-receipt/1"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "name",
+        "form",
+        "sha256",
+        "size_bytes",
+        "received_at_declared"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "form": {
+          "enum": [
+            "html",
+            "json"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "SHA-256 of the received bytes, computed BY US. The only digest in this document we can vouch for."
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "received_at_declared": {
+          "$ref": "#/$defs/instant",
+          "description": "When WE received it. Declared by us, and not an attested date."
+        }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "description": "Candidate fields, each with its source path in the document. A field whose path does not resolve is ABSENT, never null.",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "value",
+          "source_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "description": "VERBATIM. Never converted, never normalised: a receipt writing 0,3863 keeps its comma."
+          },
+          "source_path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "digests": {
+      "type": "array",
+      "description": "Every SHA-256-shaped string found, with where it appeared. What each commits to is NOT decided here.",
+      "items": {
+        "type": "object",
+        "required": [
+          "sha256",
+          "source_path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "label": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "source_path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "ALWAYS EMPTY. The importer cannot recognise a verifiable signature, and declaring one would be pretending. A receipt must therefore never be described as cryptographically signed on the strength of this document."
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  }
+}
