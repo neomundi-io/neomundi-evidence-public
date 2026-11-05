@@ -322,7 +322,9 @@ def construire(arguments: argparse.Namespace) -> int:
 
     sortie = json.dumps(manifeste, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
     if arguments.out:
-        arguments.out.write_text(sortie, encoding="utf-8")
+        # LF explicite : un manifeste de liaison peut etre atteste a son
+        # tour, et son empreinte ne doit pas dependre du systeme.
+        arguments.out.write_bytes(sortie.encode("utf-8"))
         print("manifeste ecrit : %s" % arguments.out)
         print("empreinte        : %s" % sha256(sortie.encode("utf-8")))
     else:

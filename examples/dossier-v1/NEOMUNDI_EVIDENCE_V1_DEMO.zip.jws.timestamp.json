@@ -13,11 +13,11 @@
     "La verification du temps demande le client officiel : `ots verify <preuve>`."
   ],
   "proof_name": "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
-  "proof_sha256": "cb146c0a1d841a7d252dbacfe53e82e0ab57009e7c2754dbb3ed5a14afefcc1c",
+  "proof_sha256": "3c1f7db3248c008c91f40ba1c5ab4d73594a556ca3ba1340ad83ed70e6ed4811",
   "schema": "neomundi.evidence.timestamp/1",
-  "stamped_at_declared": "2026-11-06T09:05:00Z",
+  "stamped_at_declared": "2026-11-06T10:00:00Z",
   "state_at_stamping": "pending",
   "subject_kind": "evidence_attestation",
   "subject_name": "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
-  "subject_sha256": "265144e307869f000fcd007d2791bb454bbe4f89662b43869ca10babe5f8c8f4"
+  "subject_sha256": "d533518f4413d75e7ea58923d21bfe6c168eba2f1cc6703dc12353abceda3493"
 }

@@ -19,10 +19,10 @@ from the four public OpenTimestamps calendars. Its state is `PENDING`, and
 |---|---|---|
 | `NEOMUNDI_EVIDENCE_V1_DEMO.zip` | 20,237 | the evidence package, 4 observations, 8 members |
 | `corpus/` | 5 files | the replayed inputs, so their digests recompute |
-| `…zip.jws` | 2,212 | the **Ed25519** attestation, detached |
+| `…zip.jws` | 2,211 | the **Ed25519** attestation, detached |
 | `…zip.jws.ots` | 856 | the **OpenTimestamps** proof, real, `PENDING` |
 | `…zip.jws.timestamp.json` | 1,173 | the timestamp descriptor |
-| `trust-store.json` | 2,878 | **public keys only**, status `test` |
+| `trust-store.json` | 2,793 | **public keys only**, status `test` |
 | `binding/` | 3 files | an observation ↔ artifacts binding |
 | `receipt-synthetic.html` | 2,837 | an **invented** external receipt |
 | `map-comparable.json` · `map-no-context.json` | | two correspondence tables |
@@ -32,7 +32,7 @@ from the four public OpenTimestamps calendars. Its state is `PENDING`, and
 
 ```
 archive      e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6
-attestation  265144e307869f000fcd007d2791bb454bbe4f89662b43869ca10babe5f8c8f4
+attestation  d533518f4413d75e7ea58923d21bfe6c168eba2f1cc6703dc12353abceda3493
 ```
 
 **A digest kept with the package attests nothing.** It is the only defence

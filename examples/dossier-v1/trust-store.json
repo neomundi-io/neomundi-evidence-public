@@ -59,7 +59,7 @@
       "kty": "OKP",
       "crv": "Ed25519",
       "alg": "EdDSA",
-      "x": "v1bztOu8ZpkqjxQj-heRVnA8A6HdQO7XosuW12nvGNA",
+      "x": "4gS2liEoy_CWFoUT4oJvsmUUcV8g4Bz_WgAvs5AsJBE",
       "status": "test",
       "signer_identity": "nm-recherche",
       "key_custodian_identity": "nm-operator-poste",

@@ -292,9 +292,11 @@ def stamp(arguments: argparse.Namespace) -> int:
                 "`ots verify <preuve>`.",
             ],
         }
-        arguments.descriptor.write_text(
-            json.dumps(descripteur, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+        # LF explicite : l empreinte du descripteur est citee dans la
+        # documentation, et un auditeur la recalcule.
+        arguments.descriptor.write_bytes(
+            (json.dumps(descripteur, ensure_ascii=False, indent=2, sort_keys=True)
+             + "\n").encode("utf-8")
         )
         print("descripteur   : %s" % arguments.descriptor)
 

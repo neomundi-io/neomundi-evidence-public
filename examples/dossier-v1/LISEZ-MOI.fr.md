@@ -19,10 +19,10 @@ réellement des quatre calendriers publics OpenTimestamps. Son état est
 |---|---|---|
 | `NEOMUNDI_EVIDENCE_V1_DEMO.zip` | 20 237 | le dossier de preuve, 4 observations, 8 membres |
 | `corpus/` | 5 fichiers | les entrées rejouées, pour que leurs empreintes se recalculent |
-| `…zip.jws` | 2 212 | l'attestation **Ed25519**, détachée |
+| `…zip.jws` | 2 211 | l'attestation **Ed25519**, détachée |
 | `…zip.jws.ots` | 856 | la preuve **OpenTimestamps**, réelle, `PENDING` |
 | `…zip.jws.timestamp.json` | 1 173 | le descripteur de l'horodatage |
-| `trust-store.json` | 2 878 | **clés publiques seulement**, statut `test` |
+| `trust-store.json` | 2793 | **clés publiques seulement**, statut `test` |
 | `binding/` | 3 fichiers | une liaison observation ↔ artefacts |
 | `receipt-synthetic.html` | 2 837 | un reçu externe **inventé** |
 | `map-comparable.json` · `map-no-context.json` | | deux tables de correspondance |
@@ -32,7 +32,7 @@ réellement des quatre calendriers publics OpenTimestamps. Son état est
 
 ```
 archive      e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6
-attestation  265144e307869f000fcd007d2791bb454bbe4f89662b43869ca10babe5f8c8f4
+attestation  d533518f4413d75e7ea58923d21bfe6c168eba2f1cc6703dc12353abceda3493
 ```
 
 **Une empreinte conservée avec le dossier n'atteste rien.** C'est la seule

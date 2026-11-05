@@ -501,6 +501,13 @@ jobs:
           print("bind reutilise :", ", ".join(sorted(appels)))
           PY
 
+      - name: Les octets commites sont ceux du travail -- aucun CRLF
+        run: |
+          # A casse la CI le 6 novembre : un `.jws` ecrit sous Windows
+          # portait des CRLF, Git le normalisait, et son empreinte changeait
+          # -- celle sur laquelle la preuve d horodatage s engage.
+          python tests/test_no_crlf.py
+
       - name: Aucun materiau de cle privee dans le suivi
         run: |
           python - <<'PY'

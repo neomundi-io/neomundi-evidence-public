@@ -1,0 +1,20 @@
+{
+  "bundle_id": "ci-fixture",
+  "entries": [
+    {
+      "recording": "fixture-a.json"
+    },
+    {
+      "recording": "fixture-b.json"
+    },
+    {
+      "recording": "fixture-c.json"
+    },
+    {
+      "recording": "fixture-d.json"
+    }
+  ],
+  "frozen_at": "2026-01-01T00:00:00Z",
+  "origin": "ci-fixture",
+  "regime": "synthetic"
+}

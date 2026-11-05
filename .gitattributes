@@ -10,3 +10,20 @@
 *.py text eol=lf
 *.md text eol=lf
 *.zip binary
+
+# Les artefacts dont l'empreinte EST la preuve ne sont jamais normalises.
+#
+# Constate le 6 novembre : un `.jws` ecrit sous Windows portait des CRLF,
+# Git le normalisait en LF, et son empreinte changeait de 265144e3... a
+# 9247482d... La preuve d'horodatage, qui s'engage sur cette empreinte, ne
+# concordait plus. Les octets de ces fichiers sont la piece : Git ne doit
+# pas y toucher.
+*.jws -text
+*.ots -text
+*.jws.timestamp.json -text
+trust-store.json -text
+
+# Le dossier de revue V1 porte une chaine de preuve complete : ses
+# octets ne sont jamais normalises, documents exceptes.
+examples/dossier-v1/** -text
+examples/dossier-v1/*.md text eol=lf

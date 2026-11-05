@@ -17,3 +17,15 @@ corpus/
 __pycache__/
 *.pyc
 .venv/
+
+# EXCEPTION, nommee : le dossier de revue V1 est ENTIEREMENT SYNTHETIQUE.
+#
+# La regle ci-dessus reste juste -- une archive de preuve reelle porte des
+# donnees de campagne et n'a pas sa place dans Git. Celle-ci ne porte aucune
+# donnee reelle : `dataset_id` vaut `ci-fixture`, les items sont inventes, et
+# la cle qui l'atteste etait une cle de demonstration detruite. Un relecteur
+# externe doit pouvoir cloner le depot et verifier le dossier sans rien
+# telecharger d'autre.
+!examples/dossier-v1/**/*.zip
+!examples/dossier-v1/corpus/
+!examples/dossier-v1/corpus/**
