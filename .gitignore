@@ -1,0 +1,19 @@
+# Les archives de preuve ne vivent pas dans Git.
+#
+# Une archive porte des donnees de campagne et son empreinte change a chaque
+# export : la versionner melangerait du binaire mouvant a du code, et ferait de
+# GitHub un coffre — ce qu'il n'est pas. Les empreintes de reference sont dans
+# docs/REFERENCE_EXTERNE.md ; les archives, sur un support prive.
+*.zip
+*.zip.sha256
+
+# Corpus et registres : hors de ce depot, par construction.
+var/
+corpus/
+*.jsonl
+
+# Sorties de demonstration et d'execution
+/tmp/
+__pycache__/
+*.pyc
+.venv/

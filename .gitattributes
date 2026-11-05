@@ -1,0 +1,12 @@
+# Les fins de ligne sont normalisees en LF dans le depot.
+#
+# Un `.sh` recupere en CRLF ne s'execute pas sous bash : le shell lit
+# `#!/usr/bin/env bash\r` et cherche un interpreteur nomme « bash\r ». Le
+# verificateur, lui, doit rendre la meme empreinte sur toute machine : un
+# fichier dont les fins de ligne changent selon le systeme n'est pas
+# comparable.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.zip binary
