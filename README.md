@@ -142,6 +142,7 @@ duration **not established** — an aborted call leaves no duration behind.
 ```sh
 python verify.py NEOMUNDI_EVIDENCE_DEMO_V0.1.zip
 python verify.py <archive> --corpus <input corpus directory>
+python verify.py <archive> --json report.json     # machine-readable, in addition
 ```
 
 Standard library only. No dependency, no network call, no write.
@@ -171,6 +172,38 @@ BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED
 
 The two `NOT TESTED` are the JCS chaining and the archive's origin — the two
 checks no local verification can perform.
+
+---
+
+## Bind an observation to its evidence
+
+A record declares digests of objects that are **not inside the archive**: the
+response, the prompt, the request. Binding means offering a file whose bytes
+hash to one of those digests.
+
+```sh
+python bind.py build --archive <archive> --observation obs-... \
+                     --artifact response=response.txt \
+                     --created-at 2026-11-05T12:00:00Z --out manifest.json
+python bind.py verify manifest.json --archive <archive>
+```
+
+Four assurance levels, and **the level is derived by the verifier, never read
+from the manifest**:
+
+| Level | Available today |
+|---|---|
+| `declared` | yes |
+| `reference_verifiable` | **yes** |
+| `cryptographically_attested` | **no** — nothing here verifies a signature |
+| `not_demonstrable` | a statement, not an achievement |
+
+A manifest claiming more than it can show is refused. Two manifests carrying
+word-for-word identical prose, one anchored and one not, get different
+verdicts — because **a textual description of an execution is not proof that
+the execution took place**.
+
+See [Binding](docs/BINDING.md) · `sh demo_binding.sh <archive>`
 
 ---
 
@@ -240,6 +273,10 @@ publisher.
 | [`docs/CORPUS_REFERENCE.md`](docs/CORPUS_REFERENCE.md) | the corpora, their hashes, and how an auditor checks them |
 | [`docs/EXTERNAL_REFERENCE.md`](docs/EXTERNAL_REFERENCE.md) | verifying from an independently kept hash — and why an internal hash attests nothing |
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
+| [`docs/BINDING.md`](docs/BINDING.md) | binding an observation to its evidence, the four assurance levels, and the terminology |
+| [`docs/REPLAY_FEASIBILITY.md`](docs/REPLAY_FEASIBILITY.md) | can a measurement be replayed? GO / NO-GO, with the blockers |
+| [`docs/ADVERSARIAL_AUDIT_EVIDENCE_2026-11-05.md`](docs/ADVERSARIAL_AUDIT_EVIDENCE_2026-11-05.md) | the adversarial audit of 5 November: 18 capabilities, what each one really does |
+| [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md) | the 5 November consolidation: what changed, and the nine answers |
 | [`docs/FUTURE_SITE.md`](docs/FUTURE_SITE.md) | the planned architecture of the product site — not built, not deployed |
 
 Each document exists in English and in French (`*.fr.md`).

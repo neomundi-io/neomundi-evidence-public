@@ -144,6 +144,7 @@ une durée **non établie** — un appel abandonné ne laisse aucune durée.
 ```sh
 python verify.py NEOMUNDI_EVIDENCE_DEMO_V0.1.zip
 python verify.py <archive> --corpus <répertoire du corpus d'entrée>
+python verify.py <archive> --json rapport.json     # lisible par machine, en plus
 ```
 
 Bibliothèque standard seule. Aucune dépendance, aucun appel réseau, aucune
@@ -174,6 +175,38 @@ BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED
 
 Les deux `NOT TESTED` sont le chaînage JCS et l'origine de l'archive — les deux
 contrôles qu'aucune vérification locale ne peut faire.
+
+---
+
+## Lier une observation à ses preuves
+
+Un enregistrement déclare les empreintes d'objets qui ne sont **pas dans
+l'archive** : la réponse, le prompt, la requête. Lier, c'est produire un
+fichier dont les octets se hachent sur l'une de ces empreintes.
+
+```sh
+python bind.py build --archive <archive> --observation obs-... \
+                     --artifact response=reponse.txt \
+                     --created-at 2026-11-05T12:00:00Z --out manifest.json
+python bind.py verify manifest.json --archive <archive>
+```
+
+Quatre niveaux de garantie, et **le niveau est dérivé par le vérificateur,
+jamais lu dans le manifeste** :
+
+| Niveau | Disponible aujourd'hui |
+|---|---|
+| `declared` | oui |
+| `reference_verifiable` | **oui** |
+| `cryptographically_attested` | **non** — rien ici ne vérifie une signature |
+| `not_demonstrable` | un constat, pas un acquis |
+
+Un manifeste qui se revendique mieux qu'il ne l'est est refusé. Deux
+manifestes portant une prose identique mot pour mot, l'un ancré et l'autre
+non, reçoivent des verdicts différents — parce qu'**une description textuelle
+d'une exécution ne constitue pas une preuve que cette exécution a eu lieu**.
+
+Voir [Liaison](docs/BINDING.fr.md) · `sh demo_binding.sh <archive>`
 
 ---
 
@@ -243,6 +276,10 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/CORPUS_REFERENCE.fr.md`](docs/CORPUS_REFERENCE.fr.md) | les corpus, leurs empreintes, et comment un auditeur les vérifie |
 | [`docs/EXTERNAL_REFERENCE.fr.md`](docs/EXTERNAL_REFERENCE.fr.md) | vérifier depuis une empreinte conservée indépendamment — et pourquoi une empreinte interne n'atteste rien |
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
+| [`docs/BINDING.fr.md`](docs/BINDING.fr.md) | lier une observation à ses preuves, les quatre niveaux de garantie, et la terminologie |
+| [`docs/REPLAY_FEASIBILITY.fr.md`](docs/REPLAY_FEASIBILITY.fr.md) | peut-on rejouer une mesure ? GO / NO-GO, et les blocages |
+| [`docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md`](docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md) | l'audit contradictoire du 5 novembre : 18 capacités, ce que chacune fait réellement |
+| [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.fr.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.fr.md) | la consolidation du 5 novembre : ce qui a changé, et les neuf réponses |
 | [`docs/FUTURE_SITE.fr.md`](docs/FUTURE_SITE.fr.md) | l'architecture prévue du site produit — non construit, non déployé |
 
 Chaque document existe en anglais et en français (`*.fr.md`).

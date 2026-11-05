@@ -128,8 +128,62 @@ def jcs(obj: object) -> bytes:
     )
 
 
-def lignes_jsonl(octets: bytes) -> list[dict[str, object]]:
-    return [json.loads(ligne) for ligne in octets.splitlines() if ligne.strip()]
+class EntreeIllisible(Exception):
+    """Une entree de l archive n a pas la forme attendue.
+
+    Un verificateur ne plante pas : il rend un verdict. Toute lecture
+    structuree leve cette exception plutot qu une exception de la
+    bibliotheque standard, et l appelant la convertit en FAIL motive.
+    """
+
+
+def texte(archive: zipfile.ZipFile, nom: str, encodage: str = "utf-8") -> str:
+    """Decode un membre, ou dit pourquoi il n est pas decodable."""
+    octets = archive.read(nom)
+    try:
+        return octets.decode(encodage)
+    except UnicodeDecodeError as erreur:
+        raise EntreeIllisible(
+            "%s n est pas decodable en %s : %s" % (nom, encodage, erreur)
+        ) from erreur
+
+
+def objet_json(octets: bytes, quoi: str) -> dict[str, object]:
+    """Un objet JSON, ou la raison pour laquelle ce n en est pas un."""
+    try:
+        valeur = json.loads(octets)
+    except (json.JSONDecodeError, UnicodeDecodeError) as erreur:
+        raise EntreeIllisible("%s n est pas du JSON lisible : %s" % (quoi, erreur)) from erreur
+    if not isinstance(valeur, dict):
+        raise EntreeIllisible(
+            "%s devrait etre un objet JSON ; recu %s" % (quoi, type(valeur).__name__)
+        )
+    return valeur
+
+
+def lignes_jsonl(octets: bytes, quoi: str = "un membre JSONL") -> list[dict[str, object]]:
+    """Les objets d un JSONL, ou la premiere ligne qui n en est pas un.
+
+    Le numero de ligne est celui du fichier, lignes vides comprises : c est
+    celui qu un lecteur verra dans son editeur.
+    """
+    enregistrements = []
+    for numero, ligne in enumerate(octets.splitlines(), start=1):
+        if not ligne.strip():
+            continue
+        try:
+            valeur = json.loads(ligne)
+        except (json.JSONDecodeError, UnicodeDecodeError) as erreur:
+            raise EntreeIllisible(
+                "%s, ligne %d : JSON illisible (%s)" % (quoi, numero, erreur)
+            ) from erreur
+        if not isinstance(valeur, dict):
+            raise EntreeIllisible(
+                "%s, ligne %d : attendu un objet, recu %s"
+                % (quoi, numero, type(valeur).__name__)
+            )
+        enregistrements.append(valeur)
+    return enregistrements
 
 
 def charge(enregistrement: dict[str, object]) -> dict[str, object]:
@@ -153,6 +207,30 @@ def controle_schema(bilan: Bilan, manifeste: dict[str, object], noms: list[str])
             % (schema, ", ".join(SCHEMAS_CONNUS)),
         )
         return None
+    # A-04 de l audit du 5 novembre : la forme du manifeste etait non verifiee.
+    # Un `decomptes` au mauvais type faisait echouer un controle ULTERIEUR par
+    # accident, et le lecteur du rapport l imputait a la preuve plutot qu au
+    # document. Aucune ligne PASS n est ajoutee ici : les decomptes publies de
+    # 21 et 18 lignes sont cites par des documents figes.
+    malformes = []
+    # `fichiers` est une LISTE de noms dans les deux schemas, pas une table :
+    # l avoir suppose dict faisait echouer les deux archives valides.
+    for cle, type_attendu in (("decomptes", dict), ("fichiers", list), ("absences", dict)):
+        valeur = manifeste.get(cle)
+        if valeur is not None and not isinstance(valeur, type_attendu):
+            malformes.append(
+                "%s : attendu %s, recu %s" % (cle, type_attendu.__name__, type(valeur).__name__)
+            )
+    decomptes = manifeste.get("decomptes")
+    if isinstance(decomptes, dict):
+        malformes += [
+            "decomptes.%s : attendu un entier, recu %s" % (c, type(v).__name__)
+            for c, v in sorted(decomptes.items())
+            if not isinstance(v, int) or isinstance(v, bool)
+        ]
+    if malformes:
+        bilan.dire(FAIL, "forme du manifeste", "; ".join(malformes[:5]))
+
     attendus = MEMBRES_PAR_SCHEMA[schema]
     manquants = [m for m in attendus if m not in noms]
     surplus = [n for n in noms if n not in attendus]
@@ -168,7 +246,7 @@ def controle_checksums(bilan: Bilan, archive: zipfile.ZipFile, noms: list[str]) 
     if "checksums.sha256" not in noms:
         bilan.dire(FAIL, "checksums.sha256 present", "membre absent")
         return
-    lignes = archive.read("checksums.sha256").decode("utf-8").splitlines()
+    lignes = texte(archive, "checksums.sha256").splitlines()
     declares = {}
     for ligne in lignes:
         if not ligne.strip():
@@ -203,7 +281,7 @@ def controle_checksums(bilan: Bilan, archive: zipfile.ZipFile, noms: list[str]) 
 def controle_cardinalites(
     bilan: Bilan, archive: zipfile.ZipFile, noms: list[str], manifeste: dict[str, object]
 ) -> None:
-    observations = lignes_jsonl(archive.read("observations.jsonl"))
+    observations = lignes_jsonl(archive.read("observations.jsonl"), "observations.jsonl")
     ids = {charge(e).get("observation_id") for e in observations}
     decomptes = manifeste.get("decomptes")
     decomptes = decomptes if isinstance(decomptes, dict) else {}
@@ -229,7 +307,7 @@ def controle_cardinalites(
                 "ce membre n est pas dans l archive. Le manifeste doit dire pourquoi.",
             )
             continue
-        enregistrements = lignes_jsonl(archive.read(membre))
+        enregistrements = lignes_jsonl(archive.read(membre), membre)
         if decomptes.get(cle) != len(enregistrements):
             bilan.dire(
                 FAIL,
@@ -274,7 +352,8 @@ def controle_absences(
         )
         return
     observations = {
-        charge(e).get("observation_id") for e in lignes_jsonl(archive.read("observations.jsonl"))
+        charge(e).get("observation_id")
+        for e in lignes_jsonl(archive.read("observations.jsonl"), "observations.jsonl")
     }
     ecarts = []
     for membre, cle in (
@@ -284,7 +363,7 @@ def controle_absences(
         if membre not in noms:
             continue
         couverts = {
-            charge(e).get("observation_id") for e in lignes_jsonl(archive.read(membre))
+            charge(e).get("observation_id") for e in lignes_jsonl(archive.read(membre), membre)
         }
         constate = sorted(str(o) for o in observations - couverts)
         declare = sorted(str(o) for o in absences.get(cle, []))
@@ -303,7 +382,7 @@ def controle_nulls(bilan: Bilan, archive: zipfile.ZipFile, noms: list[str]) -> N
             NOT_TESTED, "aucun signal null rendu comme zero", "aucun membre de mesures dans cette archive"
         )
         return
-    mesures = lignes_jsonl(archive.read("measurements.jsonl"))
+    mesures = lignes_jsonl(archive.read("measurements.jsonl"), "measurements.jsonl")
     nuls = values = 0
     incoherences = []
     for enregistrement in mesures:
@@ -349,7 +428,7 @@ def controle_regime(bilan: Bilan, archive: zipfile.ZipFile, manifeste: dict[str,
     hors_ligne = [r for r in regimes if r != "live"]
     gardes = manifeste.get("gardes_de_lecture")
     gardes = gardes if isinstance(gardes, list) else []
-    rapport = archive.read("rapport.md").decode("utf-8")
+    rapport = texte(archive, "rapport.md")
     if hors_ligne and not gardes:
         bilan.dire(
             FAIL,
@@ -371,10 +450,10 @@ def controle_regime(bilan: Bilan, archive: zipfile.ZipFile, manifeste: dict[str,
 def controle_confidentialite(bilan: Bilan, archive: zipfile.ZipFile, noms: list[str]) -> None:
     trouves = []
     for nom in noms:
-        texte = archive.read(nom).decode("utf-8", "replace")
+        contenu = archive.read(nom).decode("utf-8", "replace")
         for etiquette, motifs in MOTIFS_INTERDITS:
             for motif in motifs:
-                if motif in texte:
+                if motif in contenu:
                     trouves.append("%s : %s (%s)" % (nom, etiquette, motif))
     if trouves:
         bilan.dire(FAIL, "aucun secret ni chemin de machine dans l archive", " ; ".join(trouves[:4]))
@@ -397,9 +476,9 @@ def controle_csv(bilan: Bilan, archive: zipfile.ZipFile, noms: list[str]) -> Non
             "aucun membre CSV dans cette archive",
         )
         return
-    texte = archive.read("observations.csv").decode("utf-8-sig")
+    contenu = texte(archive, "observations.csv", "utf-8-sig")
     suspectes = []
-    for numero, ligne in enumerate(texte.splitlines()):
+    for numero, ligne in enumerate(contenu.splitlines()):
         for cellule in ligne.split(";"):
             nu = cellule.strip('"')
             if nu[:1] in ("=", "+", "@") or nu[:1] == "\t":
@@ -425,7 +504,10 @@ def controle_entrees(
             "aucun enregistrement de provenance : corpus de regime live, ou membre absent",
         )
         return
-    provenances = [charge(e) for e in lignes_jsonl(archive.read("replay_provenance.jsonl"))]
+    provenances = [
+        charge(e)
+        for e in lignes_jsonl(archive.read("replay_provenance.jsonl"), "replay_provenance.jsonl")
+    ]
     if not provenances:
         bilan.dire(
             NOT_TESTED, "empreintes des entrees rejouees", "aucun enregistrement de provenance"
@@ -463,7 +545,7 @@ def controle_entrees(
             NOT_TESTED, "bundle_sha256 re-derive", "le corpus fourni n a pas de manifest.json"
         )
         return
-    m = json.loads(manifeste_corpus.read_text(encoding="utf-8"))
+    m = objet_json(manifeste_corpus.read_bytes(), "le manifeste du corpus")
     entrees = m.get("entries", [])
     recs = sorted(
         (
@@ -541,23 +623,43 @@ def controle_origine(bilan: Bilan) -> None:
     )
 
 
-def main() -> int:
-    analyseur = argparse.ArgumentParser(
-        description="Verifie un dossier de preuve NeoMundi Evidence, sans aucune dependance."
-    )
-    analyseur.add_argument("archive", type=Path, help="l archive ZIP a verifier")
-    analyseur.add_argument(
-        "--corpus",
-        type=Path,
-        default=None,
-        help="repertoire du corpus d entree, pour verifier les empreintes des entrees rejouees",
-    )
-    arguments = analyseur.parse_args()
+def execute(bilan: Bilan, intitule: str, controle, *arguments: object) -> object:
+    """Lance un controle en l isolant de ses voisins.
 
-    bilan = Bilan()
+    Un controle qui ne peut pas lire son entree rend un FAIL motive, et les
+    autres controles continuent. Sans cela, un seul membre malforme empeche
+    l outil de rendre le moindre verdict -- et son code de sortie 1 devient
+    indistinguable d un FAIL legitime.
+
+    `Exception` est rattrapee largement et volontairement : tout defaut
+    imprevu de l outil doit sortir comme un FAIL nomme, jamais comme une
+    trace d appels. Le type de l exception est dit, pour que le defaut reste
+    diagnosticable.
+    """
+    try:
+        return controle(bilan, *arguments)
+    except EntreeIllisible as erreur:
+        bilan.dire(FAIL, intitule, str(erreur))
+    except Exception as erreur:  # noqa: BLE001 - voir la docstring
+        bilan.dire(
+            FAIL,
+            intitule,
+            "controle interrompu par un defaut de l outil : %s: %s"
+            % (type(erreur).__name__, erreur),
+        )
+    return None
+
+
+def deroule(bilan: Bilan, arguments: argparse.Namespace) -> None:
+    """La sequence de controles. Peut rendre la main a tout moment.
+
+    Elle n imprime jamais le bilan : c est `main` qui le fait, sur tous les
+    chemins. Un `return` ici veut dire << impossible d aller plus loin >>,
+    pas << pas de verdict >>.
+    """
     if not arguments.archive.is_file():
         bilan.dire(FAIL, "archive lisible", "%s introuvable" % arguments.archive)
-        return bilan.code_de_sortie()
+        return
 
     print("Dossier de preuve : %s" % arguments.archive)
     print("empreinte de l archive : %s\n" % sha256_fichier(arguments.archive))
@@ -566,7 +668,7 @@ def main() -> int:
         archive = zipfile.ZipFile(arguments.archive)
     except zipfile.BadZipFile as erreur:
         bilan.dire(FAIL, "archive lisible", str(erreur))
-        return bilan.code_de_sortie()
+        return
 
     with archive:
         abusifs = [
@@ -578,39 +680,110 @@ def main() -> int:
                 "aucun membre ne sort du repertoire cible",
                 "chemins abusifs : %s" % abusifs[:3],
             )
-            return bilan.code_de_sortie()
+            return
         bilan.dire(PASS, "aucun membre ne sort du repertoire cible")
 
         if archive.testzip() is not None:
             bilan.dire(FAIL, "integrite interne du ZIP", "un membre est corrompu")
-            return bilan.code_de_sortie()
+            return
         bilan.dire(PASS, "integrite interne du ZIP")
 
         noms = archive.namelist()
         if "manifest.json" not in noms:
             bilan.dire(FAIL, "manifest.json present", "sans manifeste, rien n est verifiable")
-            return bilan.code_de_sortie()
-        manifeste = json.loads(archive.read("manifest.json"))
+            return
+        try:
+            manifeste = objet_json(archive.read("manifest.json"), "manifest.json")
+        except EntreeIllisible as erreur:
+            # Le manifeste conditionne tous les autres controles : lui seul
+            # interrompt la sequence, et il le dit.
+            bilan.dire(FAIL, "manifest.json lisible", str(erreur))
+            return
+        # Aucune ligne PASS ici, volontairement : un manifeste lisible est la
+        # premisse des controles qui suivent, pas un controle de plus. En
+        # ajouter une decalerait les decomptes publies (21 lignes sur
+        # GROUNDED-S1, 18 sur MED) que des documents figes citent.
 
-        if controle_schema(bilan, manifeste, noms) is None:
-            return bilan.code_de_sortie()
-        controle_checksums(bilan, archive, noms)
-        controle_cardinalites(bilan, archive, noms, manifeste)
-        controle_absences(bilan, archive, noms, manifeste)
-        controle_nulls(bilan, archive, noms)
-        controle_regime(bilan, archive, manifeste)
-        controle_csv(bilan, archive, noms)
-        controle_confidentialite(bilan, archive, noms)
-        controle_entrees(bilan, archive, noms, arguments.corpus)
-        controle_chaine(bilan, manifeste)
-        controle_origine(bilan)
+        if execute(bilan, "schema d'export reconnu", controle_schema, manifeste, noms) is None:
+            return
+        execute(bilan, "empreintes des membres", controle_checksums, archive, noms)
+        execute(bilan, "cardinalites", controle_cardinalites, archive, noms, manifeste)
+        execute(bilan, "absences declarees", controle_absences, archive, noms, manifeste)
+        execute(bilan, "coherence des signaux nuls", controle_nulls, archive, noms)
+        execute(bilan, "garde de regime", controle_regime, archive, manifeste)
+        execute(bilan, "neutralisation des formules CSV", controle_csv, archive, noms)
+        execute(bilan, "absence de secrets et de chemins", controle_confidentialite, archive, noms)
+        execute(bilan, "empreintes des entrees", controle_entrees, archive, noms, arguments.corpus)
+        execute(bilan, "chainage du registre", controle_chaine, manifeste)
+        execute(bilan, "origine de l archive", controle_origine)
 
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(
+        description="Verifie un dossier de preuve NeoMundi Evidence, sans aucune dependance."
+    )
+    analyseur.add_argument("archive", type=Path, help="l archive ZIP a verifier")
+    analyseur.add_argument(
+        "--corpus",
+        type=Path,
+        default=None,
+        help="repertoire du corpus d entree, pour verifier les empreintes des entrees rejouees",
+    )
+    analyseur.add_argument(
+        "--json",
+        type=Path,
+        default=None,
+        metavar="FICHIER",
+        help="ecrire aussi un rapport lisible par machine. La sortie texte reste "
+        "identique : ce fichier s ajoute, il ne remplace rien.",
+    )
+    arguments = analyseur.parse_args()
+
+    bilan = Bilan()
+
+    deroule(bilan, arguments)
+
+    # Un seul point de sortie : le bilan est rendu meme quand la sequence
+    # s est arretee tot. Sans cela, un code de sortie 1 sans ligne BILAN est
+    # indistinguable d un plantage de l outil.
     print(
         "\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
         % (bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED))
     )
     if bilan.compte(FAIL):
         print("Ce dossier ne doit pas etre presente comme verifie.")
+
+    if arguments.json:
+        # Les trois etats restent trois champs distincts : un consommateur qui
+        # ne lirait que `pass` et `fail` croirait a une couverture complete.
+        rapport = {
+            "schema": "neomundi.evidence.verification-report/1",
+            "archive": str(arguments.archive),
+            "archive_sha256": (
+                sha256_fichier(arguments.archive) if arguments.archive.is_file() else None
+            ),
+            "corpus": str(arguments.corpus) if arguments.corpus else None,
+            "controls": [
+                {"state": etat, "control": intitule, "detail": detail}
+                for etat, intitule, detail in bilan.lignes
+            ],
+            "counts": {
+                "pass": bilan.compte(PASS),
+                "fail": bilan.compte(FAIL),
+                "not_tested": bilan.compte(NOT_TESTED),
+            },
+            "verdict": "fail" if bilan.compte(FAIL) else "no_failure",
+            "does_not_establish": [
+                "authenticity: no signature is verified by this tool",
+                "origin: no trusted clock, no external anchor",
+                "that the execution took place",
+            ],
+        }
+        arguments.json.write_text(
+            json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print("rapport lisible par machine : %s" % arguments.json)
+
     return bilan.code_de_sortie()
 
 
