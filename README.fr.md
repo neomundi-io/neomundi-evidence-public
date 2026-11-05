@@ -279,6 +279,11 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
 | [`docs/TIMESTAMPING.fr.md`](docs/TIMESTAMPING.fr.md) | horodatage indépendant par OpenTimestamps : ce qu'il prouve, et pourquoi `PENDING` ne prouve aucune date |
 | [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
+| [`docs/V1_QUALIFICATION.fr.md`](docs/V1_QUALIFICATION.fr.md) | le sprint de qualification : les huit conditions, et deux verdicts GO/NO-GO distincts |
+| [`docs/SIGNING_POLICY.fr.md`](docs/SIGNING_POLICY.fr.md) | qui s'engage, et la garde de la clé : les cinq rôles, et pourquoi `compromised` invalide le passé |
+| [`docs/ADR-001-ANCHORING.fr.md`](docs/ADR-001-ANCHORING.fr.md) | ADR-001 : les quatre prétentions temporelles, et pourquoi une hauteur de bloc n'est pas une date |
+| [`docs/TRUST_STORE_PUBLICATION.fr.md`](docs/TRUST_STORE_PUBLICATION.fr.md) | publier le magasin de confiance sur un second canal — conception, et l'audit de contenu qui la verrouille |
+| [`docs/I18N.fr.md`](docs/I18N.fr.md) | sortie bilingue : ce que `--lang` traduit, ce qu'il ne touche jamais, et comment la couverture est mesurée |
 | [`docs/V1_CANDIDATE.fr.md`](docs/V1_CANDIDATE.fr.md) | la fiche produit de la candidate V1 : garanties démontrées, en attente, et non validées |
 | [`docs/V1_REVIEW_PROTOCOL.fr.md`](docs/V1_REVIEW_PROTOCOL.fr.md) | le protocole de revue externe, un périmètre par relecteur |
 | [`docs/ATTESTATION.fr.md`](docs/ATTESTATION.fr.md) | l'attestation signée : comment `cryptographically_attested` est atteint, et la matrice de 23 cas |
