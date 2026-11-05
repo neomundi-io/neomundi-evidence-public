@@ -656,6 +656,88 @@ def controle_artefacts(
     return verdicts
 
 
+def controle_attestation(bilan: Bilan, verdicts: list[dict],
+                         arguments: argparse.Namespace) -> bool:
+    """L archive du sujet est-elle attestee par une cle de confiance ?
+
+    Si oui, les artefacts deja `reference_verifiable` montent a
+    `cryptographically_attested`. Le raisonnement : l ancrage d un artefact
+    est une empreinte DECLAREE PAR L ENREGISTREMENT, et cet enregistrement
+    vit dans l archive. Attester l archive atteste donc les empreintes
+    qu elle declare, et l artefact qui s y hache en herite -- transitivement.
+
+    L elevation exige les trois a la fois : l attestation, l archive, et le
+    magasin. Sans l un des trois, rien ne monte, et la ligne le dit.
+    """
+    if arguments.attestation is None:
+        bilan.dire(
+            NOT_TESTED,
+            "attestation de l archive du sujet",
+            "aucune attestation fournie. La fournir avec --attestation <fichier.jws> "
+            "--trust-store <magasin> pour que le niveau `%s` soit atteignable." % ATTESTE,
+        )
+        return False
+
+    if arguments.archive is None or arguments.trust_store is None:
+        bilan.dire(
+            FAIL,
+            "attestation de l archive du sujet",
+            "une attestation est fournie sans --archive ou sans --trust-store : elle ne "
+            "peut etre confrontee a rien. Aucun niveau n est eleve.",
+        )
+        return False
+
+    try:
+        import verify_attestation
+    except ImportError as erreur:  # pragma: no cover - module absent
+        bilan.dire(FAIL, "attestation de l archive du sujet",
+                   "verify_attestation introuvable : %s" % erreur)
+        return False
+
+    # Le verificateur d attestation ecrit sur la sortie standard : on le
+    # laisse parler, c est son rapport, et le lecteur a besoin de le voir.
+    print("\n--- verification de l attestation du sujet ---")
+    sous_arguments = argparse.Namespace(
+        attestation=arguments.attestation,
+        archive=arguments.archive,
+        trust_store=arguments.trust_store,
+        allow_test_keys=arguments.allow_test_keys,
+        json=None,
+    )
+    sous_bilan, niveau, _ = verify_attestation.verifier(sous_arguments)
+    print("--- fin de la verification de l attestation ---\n")
+
+    if niveau != verify_attestation.ATTESTE:
+        bilan.dire(
+            FAIL,
+            "attestation de l archive du sujet",
+            "l attestation fournie n atteint pas `%s` (%d FAIL, %d NOT TESTED dans sa "
+            "propre verification). Aucun niveau n est eleve."
+            % (ATTESTE, sous_bilan.compte(FAIL), sous_bilan.compte(NOT_TESTED)),
+        )
+        return False
+
+    bilan.dire(
+        PASS,
+        "attestation de l archive du sujet",
+        "l archive est attestee par une cle de confiance : les empreintes qu elle "
+        "declare le sont aussi, et les artefacts qui s y hachent en heritent.",
+    )
+    eleves = 0
+    for v in verdicts:
+        if v["derived_assurance"] == REFERENCE:
+            v["derived_assurance"] = ATTESTE
+            v["elevated_by_attestation"] = True
+            eleves += 1
+    bilan.dire(
+        PASS if eleves else NOT_TESTED,
+        "elevation des artefacts par l attestation",
+        "%d artefact(s) eleve(s) de `%s` a `%s`" % (eleves, REFERENCE, ATTESTE)
+        if eleves else "aucun artefact n etait au niveau `%s` : rien a elever" % REFERENCE,
+    )
+    return True
+
+
 def controle_revendications(bilan: Bilan, verdicts: list[dict]) -> None:
     """Le controle central : un manifeste ne doit pas se revendiquer mieux
     qu il n est.
@@ -713,18 +795,24 @@ def controle_revendications(bilan: Bilan, verdicts: list[dict]) -> None:
 def controle_signatures(bilan: Bilan, manifeste: dict) -> None:
     signatures = manifeste.get("signatures") or []
     if not signatures:
+        # Formulation rectifiee le 6 novembre : depuis que l attestation
+        # DETACHEE existe, dire ici que `cryptographically_attested` est
+        # inatteignable serait faux -- il vient peut-etre d etre atteint
+        # quelques lignes plus haut. Ce controle ne porte que sur les
+        # signatures INSCRITES AU MANIFESTE, qui sont une autre chose.
         bilan.dire(
             NOT_TESTED,
-            "verification de signature",
-            "aucune signature au manifeste, et ce depot n implemente aucune "
-            "verification de signature. Le niveau `%s` n est donc pas "
-            "atteignable aujourd hui." % ATTESTE,
+            "signatures inscrites au manifeste",
+            "aucune, et ce depot n en verifie aucune : le tableau `signatures[]` du "
+            "manifeste reste non exploite. Le niveau `%s` s obtient par une "
+            "attestation DETACHEE de l archive (--attestation), pas par ce champ."
+            % ATTESTE,
         )
         return
     cles = [s.get("key_id") for s in signatures if isinstance(s, dict)]
     bilan.dire(
         NOT_TESTED,
-        "verification de signature",
+        "signatures inscrites au manifeste",
         "%d signature(s) presente(s) (cles %s) et AUCUNE n est verifiee ici. "
         "Une signature non verifiee ne vaut pas mieux qu un champ texte."
         % (len(signatures), ", ".join(str(c) for c in cles[:3])),
@@ -804,6 +892,18 @@ def verifier(arguments: argparse.Namespace) -> int:
                 FAIL, intitule, "controle interrompu : %s: %s" % (type(erreur).__name__, erreur)
             )
 
+    # AVANT le controle des revendications : l elevation change le niveau
+    # derive, donc elle doit etre faite avant qu on juge si une revendication
+    # le depasse. Dans l autre ordre, un manifeste revendiquant a juste titre
+    # `cryptographically_attested` serait refuse.
+    try:
+        controle_attestation(bilan, verdicts, arguments)
+    except Illisible as erreur:
+        bilan.dire(FAIL, "attestation de l archive du sujet", str(erreur))
+    except Exception as erreur:  # noqa: BLE001 - un defaut de l outil sort en FAIL nomme
+        bilan.dire(FAIL, "attestation de l archive du sujet",
+                   "controle interrompu : %s: %s" % (type(erreur).__name__, erreur))
+
     controle_revendications(bilan, verdicts)
     controle_signatures(bilan, manifeste)
     controle_enonces(bilan, manifeste)
@@ -823,7 +923,15 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
     else:
         niveau_effectif = niveau
         print("Niveau de garantie DERIVE pour la liaison : %s" % niveau)
-        if niveau == REFERENCE:
+        if niveau == ATTESTE:
+            print(
+                "Soit : les artefacts offerts sont ceux auxquels l enregistrement\n"
+                "se refere, ET une partie identifiee s est engagee sur l empreinte\n"
+                "de l archive qui les declare. Ce n est toujours pas une preuve que\n"
+                "l execution a eu lieu, ni une preuve de la DATE : celle-ci reste\n"
+                "declaree faute d ancrage tiers."
+            )
+        elif niveau == REFERENCE:
             print(
                 "Soit : les artefacts offerts sont bien ceux auxquels\n"
                 "l enregistrement se refere. Ce n est pas une preuve que\n"
@@ -926,6 +1034,19 @@ def main() -> int:
     )
     v.add_argument("--json", type=Path, default=None, metavar="FICHIER",
                    help="ecrire aussi un rapport lisible par machine")
+    v.add_argument(
+        "--attestation", type=Path, default=None, metavar="FICHIER.jws",
+        help="attestation detachee de l archive du sujet. Avec --archive et "
+             "--trust-store, elle rend le niveau `%s` atteignable." % ATTESTE,
+    )
+    v.add_argument(
+        "--trust-store", type=Path, default=None, metavar="FICHIER",
+        help="magasin de confiance, pour resoudre la cle de l attestation",
+    )
+    v.add_argument(
+        "--allow-test-keys", action="store_true",
+        help="accepter explicitement une cle de statut `test`",
+    )
     v.add_argument(
         "--max-artifact-bytes",
         dest="max_artifact_bytes",

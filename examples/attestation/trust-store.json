@@ -1,0 +1,86 @@
+{
+  "schema": "neomundi.evidence.trust-store/1",
+  "store_id": "neomundi-evidence-test",
+  "updated_at_declared": "2026-11-05T00:00:00Z",
+  "store_kind": "test",
+  "verification_policy": {
+    "policy_id": "neomundi-evidence-policy/1",
+    "accepted_algorithms": [
+      "EdDSA"
+    ],
+    "accepted_curves": [
+      "Ed25519"
+    ],
+    "on_unknown_key": "not_tested",
+    "on_rotated_key_within_window": "trusted",
+    "on_rotated_key_after_window": "untrusted",
+    "on_compromised_key": "untrusted_retroactively",
+    "on_expired_key": "untrusted",
+    "on_test_key": "untrusted_unless_allowed"
+  },
+  "identities": [
+    {
+      "identity_id": "nm-recherche",
+      "legal_name": "NeoMundi Recherche",
+      "kind": "association",
+      "jurisdiction": null,
+      "registration_reference": null,
+      "legal_capacity_to_attest": "unverified",
+      "valid_from_declared": "2026-11-05T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Capacite juridique a attester NON VERIFIEE a ce stade."
+    },
+    {
+      "identity_id": "nm-operator-poste",
+      "legal_name": "nm-operator-poste",
+      "kind": "machine",
+      "jurisdiction": null,
+      "registration_reference": null,
+      "legal_capacity_to_attest": "not_applicable",
+      "valid_from_declared": "2026-11-05T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Detenteur technique de la cle, et operateur. Ne s engage sur rien."
+    },
+    {
+      "identity_id": "nm-station",
+      "legal_name": "nm-station",
+      "kind": "machine",
+      "jurisdiction": null,
+      "registration_reference": null,
+      "legal_capacity_to_attest": "not_applicable",
+      "valid_from_declared": "2026-11-05T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Auteur des mesures du corpus atteste. Distinct du signataire : mesurer n est pas s engager."
+    }
+  ],
+  "keys": [
+    {
+      "kid": "nm-ev-test-2026-11-a",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "alg": "EdDSA",
+      "x": "AbWmTU1iwbxvcu5GDuc9yzKa2NI2DPxMk5EJ0e6hUvU",
+      "status": "test",
+      "signer_identity": "nm-recherche",
+      "key_custodian_identity": "nm-operator-poste",
+      "valid_from_declared": "2026-11-05T00:00:00Z",
+      "valid_until_declared": null,
+      "superseded_by": null,
+      "revocation": null,
+      "notes": "Cle de TEST, generee le 2026-11-05 et detruite aussitot. Statut `test` : elle n accorde aucune attestation sans --allow-test-keys."
+    }
+  ],
+  "changes": [
+    {
+      "at_declared": "2026-11-05T00:00:00Z",
+      "what": "creation du magasin et inscription de la cle nm-ev-test-2026-11-a",
+      "by_identity": "nm-operator-poste"
+    }
+  ],
+  "limits": [
+    "Ce magasin ne contient que du materiel public.",
+    "Les dates y sont DECLAREES : aucune n est horodatee independamment.",
+    "La capacite juridique des identites est declaree, jamais verifiee par du code.",
+    "Magasin de TEST. La cle privee correspondante etait EPHEMERE et a ete detruite : l attestation d exemple reste verifiable, mais aucune nouvelle ne peut etre emise avec cette cle."
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neomundi.io/schemas/evidence-attestation-v1.json",
+  "title": "NeoMundi Evidence attestation, version 1",
+  "description": "The payload of a detached JWS that attests an Evidence bundle. It states that an identified signer committed to a precise digest, at a date THE SIGNER DECLARES. It does not state that the measured execution took place, nor when, nor that the declared date is true. Every date field carries the suffix `_declared` so that no reader can mistake it for an independent timestamp. La charge utile d'un JWS detache attestant un dossier Evidence. Elle etablit qu'un signataire identifie s'est engage sur une empreinte precise, a une date QU'IL DECLARE. Elle n'etablit pas que l'execution mesuree a eu lieu, ni quand, ni que la date declaree est vraie.",
+  "type": "object",
+  "required": [
+    "schema",
+    "canonicalization",
+    "attestation_id",
+    "attestation_kind",
+    "subject_kind",
+    "subject",
+    "identities",
+    "attested_at_declared",
+    "key_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "neomundi.evidence.attestation/1" },
+
+    "canonicalization": {
+      "const": "neomundi-jcs-strings/1",
+      "description": "The production profile of the signed bytes. PRECISELY SPECIFIED, and deliberately restricted so that it is provably equivalent to RFC 8785 (JCS) over its own domain: (1) UTF-8, no BOM; (2) serialisation by `json.dumps(obj, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)`; (3) permitted value types are string, null, object and array of permitted values -- NUMBERS AND BOOLEANS ARE FORBIDDEN; (4) every object key matches ^[a-z0-9_]+$. Why this is equivalent to JCS here: (a) with no numbers there is no ECMAScript number-formatting question, which is the hardest part of RFC 8785; (b) with ASCII-only keys, sorting by Unicode code point and sorting by UTF-16 code unit coincide, so Python's `sort_keys` matches JCS ordering; (c) `json.dumps` string escaping is already JCS-conformant. OUTSIDE this restricted domain the equivalence does NOT hold, which is exactly why the domain is restricted rather than the implementation extended. The verifier NEVER re-canonicalises to check a signature -- it verifies the bytes carried verbatim in the JWS -- but it DOES re-serialise to check conformance to this profile, which is a separate control."
+    },
+
+    "attestation_id": {
+      "type": "string",
+      "pattern": "^att-[0-9a-f]{16,64}$",
+      "description": "Identifier of this attestation, derived from the subject digest. Never reused."
+    },
+
+    "attestation_kind": {
+      "enum": ["contemporaneous", "retrospective"],
+      "description": "`contemporaneous`: signed as part of producing the bundle. `retrospective`: signed later, over a bundle that already existed. A retrospective attestation attests A VERIFICATION PERFORMED AT `attested_at_declared` -- never that the bundle was signed at the date of its execution or of its freeze. The verifier states this on every run."
+    },
+
+    "subject_kind": { "const": "evidence_bundle" },
+
+    "subject": {
+      "type": "object",
+      "required": ["bundle_sha256", "bundle_name", "export_schema", "observation_count"],
+      "additionalProperties": false,
+      "properties": {
+        "bundle_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "SHA-256 of the archive FILE bytes. The primary binding."
+        },
+        "bundle_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "File name as attested. Informative: a rename does not break the attestation, since the digest is what binds."
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "SHA-256 of the `manifest.json` member. Lets an auditor holding only part of the package anchor what they have."
+        },
+        "checksums_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "SHA-256 of the `checksums.sha256` member."
+        },
+        "export_schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Export schema of the attested bundle, copied verbatim from its manifest."
+        },
+        "observation_count": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "A COUNT CARRIED AS A STRING, deliberately. An integer here would reintroduce the number-canonicalisation question that the restricted profile exists to eliminate. The cost is \"30\" instead of 30; the benefit is that no serialisation disagreement between signer and verifier is possible."
+        },
+        "subject_frozen_at_declared": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/instant" }],
+          "description": "Freeze date of the attested corpus, copied from its own manifest. PRESERVED, never invented. Required in practice for a retrospective attestation, and the control refuses a retrospective attestation that omits it."
+        },
+        "subject_provenance_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }],
+          "description": "Provenance of the subject in the signer's own words. Free text, never verified."
+        }
+      }
+    },
+
+    "identities": {
+      "type": "object",
+      "description": "FIVE SEPARATE IDENTITIES. Conflating them is the commonest way an attestation overclaims: the party that commits legally, the machine operator, the author of the measurements, the holder of the key, and any third-party trust authority are different roles, and in an experimental phase they may or may not be the same people. Each value is an `identity_id` resolved in the trust store, never a free-text name.",
+      "required": ["signer", "technical_operator", "measurement_author", "key_custodian", "trust_authority"],
+      "additionalProperties": false,
+      "properties": {
+        "signer": {
+          "$ref": "#/$defs/identity_id",
+          "description": "The party that COMMITS to this attestation. Legal capacity to attest is NOT verifiable by code: the verifier reports the trust store's declared value and always returns NOT TESTED on that control."
+        },
+        "technical_operator": {
+          "$ref": "#/$defs/identity_id",
+          "description": "Who ran the signing operation on which machine."
+        },
+        "measurement_author": {
+          "$ref": "#/$defs/identity_id",
+          "description": "Who authored the measurements in the attested bundle. May differ from the signer, and in a pilot usually does."
+        },
+        "key_custodian": {
+          "$ref": "#/$defs/identity_id",
+          "description": "Who holds and controls the private key. Distinct from the signer on purpose: custody is an operational fact, commitment is a legal one."
+        },
+        "trust_authority": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identity_id" }],
+          "description": "A third party vouching for the key or the time. `null` today: no such authority exists, and no verifier here contacts one."
+        }
+      }
+    },
+
+    "attested_at_declared": {
+      "$ref": "#/$defs/instant",
+      "description": "When the signer says it signed. DECLARED, NOT INDEPENDENT. No trusted clock is involved anywhere in this mechanism, so this value must never be presented as an independent timestamp. Only a third-party anchor (OpenTimestamps is the candidate, not implemented) could make a time claim independent."
+    },
+
+    "key_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+      "description": "Identifies the verification key, resolved in the trust store. Equals the JWS header `kid`, and the verifier refuses a mismatch. Never reused across keys."
+    },
+
+    "external_anchor": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["kind", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["opentimestamps"] },
+            "status": { "enum": ["planned", "submitted", "confirmed"] },
+            "proof_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }] },
+            "note": { "type": "string" }
+          },
+          "description": "Reserved for a future third-party anchor. OpenTimestamps is the planned mechanism and is NOT implemented: no verifier here validates such a proof, so a non-null value can never raise the derived level. It is reported NOT TESTED."
+        }
+      ]
+    },
+
+    "limits": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What this attestation does not establish, in the signer's own words."
+    }
+  },
+
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "identity_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,63}$" },
+    "instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC instant, second precision, trailing Z. Second precision on purpose: sub-second digits would vary between producers for no evidential gain."
+    }
+  }
+}

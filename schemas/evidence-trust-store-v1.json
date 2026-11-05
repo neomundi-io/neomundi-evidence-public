@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neomundi.io/schemas/evidence-trust-store-v1.json",
+  "title": "NeoMundi Evidence trust store, version 1",
+  "description": "Public keys, identities and trust states used to verify Evidence attestations. PUBLIC MATERIAL ONLY -- a private key in this file would be a disclosure, and the verifier refuses a store containing a private-key field. The store lives OUTSIDE the Evidence repository: the repository ships only a test store under examples/, which grants nothing. Ne contient QUE du materiel public. Le magasin vit HORS du depot Evidence ; le depot n'embarque qu'un magasin de TEST, qui n'accorde rien.",
+  "type": "object",
+  "required": ["schema", "store_id", "updated_at_declared", "verification_policy", "identities", "keys"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "neomundi.evidence.trust-store/1" },
+
+    "store_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+      "description": "Identifies this store. A verifier may be handed several; it never merges them silently."
+    },
+
+    "updated_at_declared": { "$ref": "#/$defs/instant" },
+
+    "store_kind": {
+      "enum": ["production", "test"],
+      "default": "production",
+      "description": "A `test` store exists for examples and tests. Keys in it grant nothing unless the verifier is explicitly run with --allow-test-keys."
+    },
+
+    "verification_policy": {
+      "type": "object",
+      "description": "THE POLICY IS EXPLICIT AND VERSIONED, not implied by code. A verifier states which policy it applied; a store that declares an unknown policy is refused rather than interpreted.",
+      "required": ["policy_id", "accepted_algorithms", "accepted_curves", "on_unknown_key", "on_rotated_key_within_window", "on_rotated_key_after_window", "on_compromised_key", "on_expired_key", "on_test_key"],
+      "additionalProperties": false,
+      "properties": {
+        "policy_id": { "const": "neomundi-evidence-policy/1" },
+        "accepted_algorithms": {
+          "type": "array",
+          "items": { "const": "EdDSA" },
+          "minItems": 1,
+          "description": "The verifier IMPOSES the algorithm and never reads the JWS header to choose one. That is the defence against the algorithm-confusion family of attacks."
+        },
+        "accepted_curves": { "type": "array", "items": { "const": "Ed25519" }, "minItems": 1 },
+        "on_unknown_key": {
+          "const": "not_tested",
+          "description": "A key absent from the store yields NOT TESTED, never FAIL: the signature may be perfectly valid and we simply cannot know. Calling it invalid would be a groundless accusation."
+        },
+        "on_rotated_key_within_window": {
+          "const": "trusted",
+          "description": "Rotation means the key stopped being used. Signatures issued before the rotation stay trusted: nothing happened to the key."
+        },
+        "on_rotated_key_after_window": { "const": "untrusted" },
+        "on_compromised_key": {
+          "const": "untrusted_retroactively",
+          "description": "Compromise invalidates EVERY signature by that key, whatever its declared date. Whoever holds the private key can forge any `attested_at_declared`, so letting earlier signatures survive would mean trusting a timestamp the attacker controls. This is the distinction with `rotated`, and the reason both are named separately."
+        },
+        "on_expired_key": { "const": "untrusted" },
+        "on_test_key": { "const": "untrusted_unless_allowed" }
+      }
+    },
+
+    "identities": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The identity registry. Entries are APPEND-ONLY and IMMUTABLE for the purposes of past attestations: an attestation binds to the identity ids as they stood when it was signed. A successor may be added later -- a commercial company succeeding an association, for instance -- and adding one NEVER invalidates earlier attestations. Identities are not revocable: revocation applies to KEYS. Whether an identity had the legal capacity to attest is a legal question, recorded here as a declaration and never decided by code.",
+      "items": {
+        "type": "object",
+        "required": ["identity_id", "legal_name", "kind", "legal_capacity_to_attest", "valid_from_declared", "superseded_by"],
+        "additionalProperties": false,
+        "properties": {
+          "identity_id": { "$ref": "#/$defs/identity_id" },
+          "legal_name": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["association", "company", "organisation", "natural_person", "machine", "unassigned"],
+            "description": "`machine` for a technical operator that is a host rather than a person. `unassigned` when a role exists but has not been attributed -- honest, and better than naming the wrong party."
+          },
+          "jurisdiction": { "oneOf": [{ "type": "null" }, { "type": "string" }] },
+          "registration_reference": {
+            "oneOf": [{ "type": "null" }, { "type": "string" }],
+            "description": "A public registration reference, where one exists. Declared, never checked against a registry by this code."
+          },
+          "legal_capacity_to_attest": {
+            "enum": ["unverified", "verified", "disputed", "not_applicable"],
+            "description": "DECLARED, never derived. The verifier reports this value and always returns NOT TESTED on legal capacity: no code can establish whether an entity may lawfully commit to an attestation. `not_applicable` for roles that commit to nothing, such as a technical operator."
+          },
+          "valid_from_declared": { "$ref": "#/$defs/instant" },
+          "superseded_by": {
+            "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identity_id" }],
+            "description": "Succession link. Adding it is additive: past attestations keep their verdict, and the verifier reports the succession without re-deciding anything."
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Public verification keys. A `kid` is never reused, and the verifier refuses a store with duplicate ids.",
+      "items": {
+        "type": "object",
+        "required": ["kid", "kty", "crv", "alg", "x", "status", "signer_identity", "key_custodian_identity", "valid_from_declared", "valid_until_declared", "superseded_by", "revocation"],
+        "additionalProperties": false,
+        "properties": {
+          "kid": { "$ref": "#/$defs/identity_id" },
+          "kty": { "const": "OKP" },
+          "crv": { "const": "Ed25519" },
+          "alg": { "const": "EdDSA" },
+          "x": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "description": "The raw 32-byte public key, base64url without padding. Same shape as RGC's `public_jwk()`, so one verification path serves both. It alone rebuilds the PEM, which is what makes the independent `openssl` check possible."
+          },
+          "status": { "enum": ["active", "rotated", "compromised", "test"] },
+          "signer_identity": { "$ref": "#/$defs/identity_id" },
+          "key_custodian_identity": { "$ref": "#/$defs/identity_id" },
+          "valid_from_declared": { "$ref": "#/$defs/instant" },
+          "valid_until_declared": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/instant" }] },
+          "superseded_by": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identity_id" }] },
+          "revocation": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["kind", "at_declared", "reason"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "enum": ["rotated", "compromised"] },
+                  "at_declared": { "$ref": "#/$defs/instant" },
+                  "reason": { "type": "string", "minLength": 1 }
+                }
+              }
+            ]
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "changes": {
+      "type": "array",
+      "description": "Change history of this store, append-only. It is a record, not a proof: nothing here is independently timestamped.",
+      "items": {
+        "type": "object",
+        "required": ["at_declared", "what"],
+        "additionalProperties": false,
+        "properties": {
+          "at_declared": { "$ref": "#/$defs/instant" },
+          "what": { "type": "string", "minLength": 1 },
+          "by_identity": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identity_id" }] }
+        }
+      }
+    },
+
+    "limits": { "type": "array", "items": { "type": "string" } }
+  },
+
+  "$defs": {
+    "identity_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,63}$" },
+    "instant": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" }
+  }
+}
