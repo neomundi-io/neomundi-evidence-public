@@ -46,8 +46,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Installer la seule dependance, et seulement pour signer
-        run: python -m pip install --disable-pip-version-check --quiet cryptography
+      - name: Installer les dependances OPTIONNELLES
+        run: |
+          # `cryptography` pour signer, `opentimestamps` pour lire l arbre
+          # d une preuve. Les deux sont OPTIONNELLES : un job separe eprouve
+          # le comportement sans elles.
+          python -m pip install --disable-pip-version-check --quiet \
+            cryptography opentimestamps
 
       - name: Fabriquer la fixture
         run: |
@@ -129,6 +134,56 @@ jobs:
       - name: Suite d attestation
         run: |
           python tests/test_attestation.py "$ARCHIVE" "$FIXTURE/corpus"
+
+      - name: Suite d horodatage -- HORS RESEAU
+        run: |
+          # `tests/test_timestamp_network.py` n est PAS lance ici : il touche
+          # quatre serveurs tiers, et une CI qui rougit sans cause interne
+          # apprend a ignorer le rouge.
+          python tests/test_timestamp.py
+
+      - name: Horodatage -- la liaison ne depend de RIEN
+        run: |
+          # La propriete qui fonde l architecture : l empreinte engagee se lit
+          # a offset fixe, donc la liaison tient sans `opentimestamps`.
+          mkdir -p "$RUNNER_TEMP/sans-ots/opentimestamps"
+          echo "raise ImportError('bloque')" > "$RUNNER_TEMP/sans-ots/opentimestamps/__init__.py"
+          PYTHONPATH="$RUNNER_TEMP/sans-ots" python timestamp.py verify \
+            examples/timestamp/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.ots \
+            --subject examples/attestation/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws
+          PYTHONPATH="$RUNNER_TEMP/sans-ots" python - <<'PY'
+          import subprocess, sys
+          r = subprocess.run(
+              [sys.executable, "timestamp.py", "verify",
+               "examples/timestamp/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.ots",
+               "--subject", "examples/attestation/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws"],
+              capture_output=True, text=True)
+          liaison = next(l for l in r.stdout.splitlines()
+                         if "liaison a l empreinte du sujet" in l)
+          assert liaison.startswith("[PASS"), liaison
+          arbre = next(l for l in r.stdout.splitlines()
+                       if "arbre des attestations" in l)
+          assert arbre.startswith("[NOT TESTED"), arbre
+          assert r.returncode == 0
+          print("liaison PASS sans la bibliotheque ; arbre NOT TESTED")
+          PY
+
+      - name: Horodatage -- PENDING n est pas une preuve de temps
+        run: |
+          set +e
+          python timestamp.py verify \
+            examples/timestamp/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.ots \
+            --subject examples/attestation/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws \
+            --strict > /dev/null
+          code=$?
+          set -e
+          test $code -eq 2 || { echo "::error::une preuve PENDING doit rendre 2 en strict, rendu $code"; exit 1; }
+          python timestamp.py verify \
+            examples/timestamp/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.ots \
+            --subject examples/attestation/NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws \
+            | grep -q "qualification eIDAS" \
+            || { echo "::error::la ligne eIDAS doit etre rendue a chaque execution"; exit 1; }
+          echo "PENDING -> code 2 en strict ; aucune qualification eIDAS revendiquee"
 
       - name: Suite de liaison
         run: |
@@ -317,6 +372,26 @@ jobs:
                                    "PrivateFormat", ".sign(") if m in texte]
           assert not interdits, "primitives privees trouvees : %s" % interdits
           print("aucun chemin vers une cle privee")
+          PY
+
+      - name: Le chemin de verification d horodatage ne touche AUCUN reseau
+        run: |
+          python - <<'PY'
+          import ast, pathlib
+          arbre = ast.parse(pathlib.Path("timestamp.py").read_text(encoding="utf-8"))
+          fonctions = {n.name: n for n in ast.walk(arbre)
+                       if isinstance(n, ast.FunctionDef)}
+          interdits = []
+          for nom in ("verifier", "rendre", "empreinte_engagee",
+                      "lire_attestations", "charge_officielle", "inspect"):
+              if nom not in fonctions:
+                  continue
+              source = ast.unparse(fonctions[nom])
+              interdits += ["%s dans %s" % (m, nom)
+                            for m in ("RemoteCalendar", "urlopen", "requests",
+                                      "socket", "submit(") if m in source]
+          assert not interdits, interdits
+          print("verify et inspect sont hors ligne, verifie sur le graphe d appels")
           PY
 
       - name: La reconciliation REUTILISE bind.py, sans second moteur

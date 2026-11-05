@@ -274,6 +274,7 @@ publisher.
 | [`docs/CORPUS_REFERENCE.md`](docs/CORPUS_REFERENCE.md) | the corpora, their hashes, and how an auditor checks them |
 | [`docs/EXTERNAL_REFERENCE.md`](docs/EXTERNAL_REFERENCE.md) | verifying from an independently kept hash — and why an internal hash attests nothing |
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
+| [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
 | [`docs/ATTESTATION.md`](docs/ATTESTATION.md) | the signed attestation: how `cryptographically_attested` is reached, and the 23-case matrix |
 | [`docs/RECONCILIATION.md`](docs/RECONCILIATION.md) | reconciling an external receipt with a NeoMundi measurement: five statuses, and why comparability comes first |
