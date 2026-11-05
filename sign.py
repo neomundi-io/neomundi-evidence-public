@@ -293,7 +293,9 @@ def _instant(valeur: str) -> str | None:
 def attest(arguments: argparse.Namespace) -> int:
     if not arguments.archive.is_file():
         raise SystemExit("[FAIL] archive introuvable : %s" % arguments.archive)
-    cle = json.loads(arguments.key.read_text(encoding="utf-8"))
+    # Les OCTETS, pas le texte : `json.loads` detecte un BOM lui-meme,
+    # et une cle ecrite par PowerShell en porte un.
+    cle = json.loads(arguments.key.read_bytes())
     privee = ed25519.Ed25519PrivateKey.from_private_bytes(deb64u(cle["d"]))
     kid = cle["kid"]
 

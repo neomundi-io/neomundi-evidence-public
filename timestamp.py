@@ -628,7 +628,10 @@ def upgrade(arguments: argparse.Namespace) -> int:
     # verifiable : `verify` compare `proof_sha256` a l empreinte du
     # fichier, et une preuve upgradee en a forcement une autre.
     if arguments.descriptor is not None:
-        ancien = json.loads(arguments.descriptor.read_text(encoding="utf-8"))
+        # Les OCTETS : `json.loads` y detecte un BOM, sur du texte deja
+        # decode il echoue. `verify` lisait deja les octets ; cette
+        # ligne-ci, ecrite plus tard, ne le faisait pas.
+        ancien = json.loads(arguments.descriptor.read_bytes())
         if ancien.get("subject_sha256") != engagee:
             raise SystemExit(
                 "[FAIL] ce descripteur ne decrit pas cette preuve :\n"

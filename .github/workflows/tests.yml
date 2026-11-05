@@ -203,6 +203,13 @@ jobs:
         run: |
           python tests/test_reconciliation.py
 
+      # Un BOM UTF-8 est banal : PowerShell en met un, et 15 des 22
+      # fichiers du dossier reel du 30 octobre en portent. Refuser un
+      # fichier valide pour cette raison accuse le partenaire a notre place.
+      - name: Suite BOM -- un fichier a BOM reste lisible
+        run: |
+          python tests/test_bom.py
+
       - name: Reconciliation -- les cinq statuts, et rien de devine
         run: |
           python adapters/receipt_import.py \
