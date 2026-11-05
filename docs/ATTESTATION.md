@@ -330,6 +330,60 @@ The attestation detects it — because the original digest was signed elsewhere.
 
 ---
 
+---
+
+## The future need for a strict mode, for automated use
+
+`NOT TESTED` is **the right verdict for a human reader**, and it is kept as
+is: a key unknown to the store may perfectly well have produced a valid
+signature, and declaring it invalid would be a groundless accusation. The
+verifier therefore exits with **code 0**.
+
+**But that choice is a trap for an automated consumer.** A pipeline reading
+the exit code cannot today tell apart:
+
+| Actual situation | Exit code | What a script concludes |
+|---|---|---|
+| level `cryptographically_attested` reached | `0` | "attested" |
+| key **unknown** to the store | `0` | "attested" — **false** |
+| `cryptography` **absent** from the environment | `0` | "attested" — **false** |
+| no trust store supplied | `0` | "attested" — **false** |
+
+The last three are **non-verifications**, not successes. The text and the JSON
+report say so plainly — `attained_level` is `null` and every control carries
+its `state` — but a script that reads only the exit code takes them for a
+green light.
+
+### What a strict mode should do
+
+**Not implemented. To be decided, and not to be improvised.**
+
+A `--strict` flag would exit **non-zero** as soon as a **pillar** is
+`NOT TESTED`, without changing any verdict: the lines would stay `NOT TESTED`,
+only the exit code would change. The five pillars are the canonicalisation
+profile, the imposed algorithm, the signature, trust, and agreement.
+
+The lines that are **permanently** `NOT TESTED` — legal capacity, independent
+timestamp, third-party anchoring, truth of the content — should **never** enter
+that computation: they will never be `PASS`, and a strict mode counting them
+would always be red, hence useless.
+
+Three properties to hold:
+
+1. **strict mode changes no verdict**, only the exit code. Turning a
+   `NOT TESTED` into a `FAIL` would reintroduce the merging of states this
+   product forbids;
+2. **the default stays non-strict**, so that a human run keeps returning a
+   diagnosis rather than a refusal;
+3. **the JSON report must carry the mode applied**, otherwise two runs with
+   the same verdict and different exit codes would be indistinguishable after
+   the fact.
+
+**Usage recommendation, effective now and without waiting for that mode:** an
+automated consumer should not read the exit code, but the JSON report —
+`attained_level` and each pillar's `state`. That is already sufficient, and
+already correct.
+
 ## Residual limits
 
 | | Severity |

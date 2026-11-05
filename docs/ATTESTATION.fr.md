@@ -337,6 +337,61 @@ referme.**
 
 ---
 
+---
+
+## Le besoin futur d'un mode strict, pour les usages automatisés
+
+`NOT TESTED` est **le bon verdict pour un lecteur humain**, et il est conservé
+tel quel : une clé inconnue du magasin peut parfaitement avoir produit une
+signature valide, et la déclarer fausse serait une accusation sans fondement.
+Le vérificateur sort donc en **code 0**.
+
+**Mais ce choix est un piège pour un consommateur automatisé.** Une chaîne
+d'intégration qui lit le code de sortie ne distingue pas aujourd'hui :
+
+| Situation réelle | Code de sortie | Ce qu'un script en conclut |
+|---|---|---|
+| niveau `cryptographically_attested` atteint | `0` | « attesté » |
+| clé **inconnue** du magasin | `0` | « attesté » — **faux** |
+| `cryptography` **absent** de l'environnement | `0` | « attesté » — **faux** |
+| aucun magasin fourni | `0` | « attesté » — **faux** |
+
+Les trois dernières lignes sont des **non-vérifications**, pas des succès. Le
+texte et le rapport JSON les disent clairement — `attained_level` vaut `null`
+et chaque contrôle porte son `state` — mais un script qui se contente du code
+de sortie les lit comme un feu vert.
+
+### Ce que le mode strict devrait faire
+
+**Non implémenté. À décider, et à ne pas improviser.**
+
+Un drapeau `--strict` ferait sortir en **code non nul** dès qu'un **pilier**
+est `NOT TESTED`, sans changer aucun verdict : les lignes resteraient
+`NOT TESTED`, seul le code de sortie changerait. Les cinq piliers sont le
+profil de canonicalisation, l'algorithme imposé, la signature, la confiance et
+la concordance.
+
+Les lignes **définitivement** `NOT TESTED` — capacité juridique, horodatage
+indépendant, ancrage tiers, vérité du contenu — ne devraient **jamais** entrer
+dans ce calcul : elles ne seront jamais `PASS`, et un mode strict qui les
+compterait serait toujours rouge, donc inutile.
+
+Trois propriétés à tenir :
+
+1. **le mode strict ne modifie aucun verdict**, il ne change que le code de
+   sortie. Transformer un `NOT TESTED` en `FAIL` réintroduirait la fusion des
+   états que ce produit interdit ;
+2. **le défaut reste non strict**, pour qu'une exécution humaine continue de
+   rendre un diagnostic plutôt qu'un refus ;
+3. **le rapport JSON doit porter le mode appliqué**, sinon deux exécutions au
+   même verdict et au code de sortie différent seraient indistinguables après
+   coup.
+
+**Recommandation d'usage, dès maintenant et sans attendre ce mode :** un
+consommateur automatisé ne doit pas lire le code de sortie, mais le rapport
+JSON — `attained_level` et le `state` de chaque pilier. C'est déjà suffisant,
+et c'est déjà juste.
+
 ## Limites résiduelles
 
 | | Portée |
