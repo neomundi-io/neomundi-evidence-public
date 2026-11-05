@@ -1,0 +1,106 @@
+{
+  "digests": [
+    {
+      "label": "empreinte de la reponse",
+      "sha256": "5ebf9582f2aed6ea16c5cef8c67f01b4b6746cd12554f3e36f43b603ab36ee4c",
+      "source_path": "table/tr[7]/td[1]"
+    },
+    {
+      "label": "empreinte du journal d execution 1",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "source_path": "table/tr[8]/td[1]"
+    },
+    {
+      "label": "empreinte du journal d execution 2",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "source_path": "table/tr[9]/td[1]"
+    },
+    {
+      "label": "condense du recu",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "source_path": "table/tr[10]/td[1]"
+    }
+  ],
+  "fields": [
+    {
+      "label": "reference",
+      "source_path": "dl/dt+dd[reference]",
+      "value": "CP-SYNTH-0001"
+    },
+    {
+      "label": "item",
+      "source_path": "dl/dt+dd[item]",
+      "value": "fixture-item-a"
+    },
+    {
+      "label": "modele declare",
+      "source_path": "dl/dt+dd[modele declare]",
+      "value": "ci-fixture-v1"
+    },
+    {
+      "label": "champ",
+      "source_path": "table/tr[1]/td[1]",
+      "value": "valeur"
+    },
+    {
+      "label": "executions independantes",
+      "source_path": "table/tr[2]/td[1]",
+      "value": "2"
+    },
+    {
+      "label": "resultat declare",
+      "source_path": "table/tr[3]/td[1]",
+      "value": "concordant"
+    },
+    {
+      "label": "latence observee (ms)",
+      "source_path": "table/tr[4]/td[1]",
+      "value": "100"
+    },
+    {
+      "label": "score de coherence",
+      "source_path": "table/tr[5]/td[1]",
+      "value": "0,3863"
+    },
+    {
+      "label": "score de stabilite declare",
+      "source_path": "table/tr[6]/td[1]",
+      "value": "0,594"
+    },
+    {
+      "label": "empreinte de la reponse",
+      "source_path": "table/tr[7]/td[1]",
+      "value": "5ebf9582f2aed6ea16c5cef8c67f01b4b6746cd12554f3e36f43b603ab36ee4c"
+    },
+    {
+      "label": "empreinte du journal d execution 1",
+      "source_path": "table/tr[8]/td[1]",
+      "value": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "label": "empreinte du journal d execution 2",
+      "source_path": "table/tr[9]/td[1]",
+      "value": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "label": "condense du recu",
+      "source_path": "table/tr[10]/td[1]",
+      "value": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "limits": [
+    "Ce recu est une DECLARATION EXTERNE, pas une preuve primaire.",
+    "Aucun champ n a ete interprete : les valeurs sont verbatim, et aucune correspondance avec un champ NeoMundi n est supposee.",
+    "`received_at_declared` est declare par NOUS : c est la date de reception, pas une date attestee.",
+    "Aucune signature n a ete reconnue ni verifiee. Ce recu ne doit jamais etre qualifie de << cryptographiquement signe >>."
+  ],
+  "schema": "neomundi.evidence.external-receipt/1",
+  "signatures": [],
+  "source": {
+    "form": "html",
+    "name": "receipt-synthetic.html",
+    "received_at_declared": "2026-11-06T09:10:00Z",
+    "sha256": "36e634bc758ea9dc1910ea2c9290713d859e2450729c77aa8895d371e3a3f80b",
+    "size_bytes": 2837
+  }
+}

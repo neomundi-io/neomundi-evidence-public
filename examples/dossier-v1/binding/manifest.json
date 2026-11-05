@@ -1,0 +1,53 @@
+{
+  "schema": "neomundi.evidence.manifest/1",
+  "created_at": "2026-11-06T09:00:00Z",
+  "subject": {
+    "observation_id": "obs-06ada57c26aa5cf429e9f2c0a99e3e4a42daecd45fc4c955d7c1399ab4227ae8",
+    "record_sha256": "983a7ac49e622ed74185384f116d971cc74a9e3f03a48db3dcb966dbca16f554",
+    "code_commit": "0000000000000000000000000000000000000000",
+    "comparability_key": "gen:v1:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+    "measurement_version": "3.3.1",
+    "source_archive": {
+      "name": "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
+      "sha256": "e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6"
+    }
+  },
+  "declared_digests": {
+    "bundle_sha256": "b4d3a67a328001d80bfbcde2a4e57ea186081c7ffbb2e51a60a8a3ca27ce600e",
+    "config_snapshot_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "prompt_sha256": "c5624e7688061c87b5cc059290e1678d919379eb489d836119ce942e4110ca24",
+    "recording_sha256": "70c3df01e4ac6aac2b3550fad3d313257b71685bbd8726ebc5732a95bfda1622",
+    "request_sha256": "80d51bb829a6e379a6f43309aa6b28d206ff39953816b748267b16bed58be497",
+    "response_sha256": "5ebf9582f2aed6ea16c5cef8c67f01b4b6746cd12554f3e36f43b603ab36ee4c"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "art-01",
+      "role": "response",
+      "path": "response.txt",
+      "size_bytes": 220,
+      "sha256": "5ebf9582f2aed6ea16c5cef8c67f01b4b6746cd12554f3e36f43b603ab36ee4c",
+      "binds_to": "response_sha256",
+      "claimed_assurance": "reference_verifiable"
+    },
+    {
+      "artifact_id": "art-02",
+      "role": "recording",
+      "path": "responses/fixture-a.json",
+      "size_bytes": 507,
+      "sha256": "70c3df01e4ac6aac2b3550fad3d313257b71685bbd8726ebc5732a95bfda1622",
+      "binds_to": "recording_sha256",
+      "claimed_assurance": "reference_verifiable"
+    }
+  ],
+  "signatures": [],
+  "statements": [
+    "Liaison de demonstration, sur une archive SYNTHETIQUE."
+  ],
+  "limits": [
+    "Une correspondance d empreinte etablit qu un fichier est celui auquel l enregistrement se refere. Elle n etablit pas que l execution a eu lieu.",
+    "Aucune signature n est verifiee : ce depot n en implemente aucune.",
+    "`created_at` et `declared_origin` sont declares par l auteur du manifeste et ne sont contredits par rien.",
+    "Un faussaire qui reconstruit a la fois l archive et les artefacts produit un ensemble coherent. Seule une empreinte conservee ailleurs le detecte."
+  ]
+}

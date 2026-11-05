@@ -276,6 +276,8 @@ publisher.
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
 | [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
+| [`docs/V1_CANDIDATE.md`](docs/V1_CANDIDATE.md) | the V1 candidate product sheet: demonstrated, pending, and not-validated guarantees |
+| [`docs/V1_REVIEW_PROTOCOL.md`](docs/V1_REVIEW_PROTOCOL.md) | the external review protocol, one scope per reviewer |
 | [`docs/ATTESTATION.md`](docs/ATTESTATION.md) | the signed attestation: how `cryptographically_attested` is reached, and the 23-case matrix |
 | [`docs/RECONCILIATION.md`](docs/RECONCILIATION.md) | reconciling an external receipt with a NeoMundi measurement: five statuses, and why comparability comes first |
 | [`docs/CP8_ADAPTER_SPEC.md`](docs/CP8_ADAPTER_SPEC.md) | external receipt adapter — specification only, no code |

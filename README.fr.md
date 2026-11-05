@@ -279,6 +279,8 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
 | [`docs/TIMESTAMPING.fr.md`](docs/TIMESTAMPING.fr.md) | horodatage indépendant par OpenTimestamps : ce qu'il prouve, et pourquoi `PENDING` ne prouve aucune date |
 | [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
+| [`docs/V1_CANDIDATE.fr.md`](docs/V1_CANDIDATE.fr.md) | la fiche produit de la candidate V1 : garanties démontrées, en attente, et non validées |
+| [`docs/V1_REVIEW_PROTOCOL.fr.md`](docs/V1_REVIEW_PROTOCOL.fr.md) | le protocole de revue externe, un périmètre par relecteur |
 | [`docs/ATTESTATION.fr.md`](docs/ATTESTATION.fr.md) | l'attestation signée : comment `cryptographically_attested` est atteint, et la matrice de 23 cas |
 | [`docs/RECONCILIATION.fr.md`](docs/RECONCILIATION.fr.md) | réconcilier un reçu externe avec une mesure NeoMundi : cinq statuts, et pourquoi la comparabilité passe d'abord |
 | [`docs/CP8_ADAPTER_SPEC.fr.md`](docs/CP8_ADAPTER_SPEC.fr.md) | adaptateur de reçu externe — spécification seule, aucun code |

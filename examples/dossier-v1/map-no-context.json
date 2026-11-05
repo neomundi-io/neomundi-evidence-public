@@ -1,0 +1,64 @@
+{
+  "schema": "neomundi.evidence.reconciliation-map/1",
+  "note": "Table FIDELE a un recu reel qui ne declare ni version de mesure, ni couverture, ni definition de score. C est le cas le plus frequent, et il rend toute comparaison de valeur impossible. Chaque correspondance declare sa NATURE : une frontiere de comparabilite ne mord que sur les valeurs mesurees, jamais sur une empreinte ni sur un identifiant.",
+  "receipt_context": {},
+  "mappings": [
+    {
+      "receipt_label": "latence observee (ms)",
+      "neomundi_field": "latency_ms",
+      "basis": "la latence est la meme grandeur des deux cotes, en millisecondes",
+      "kind": "measured_value"
+    },
+    {
+      "receipt_label": "score de coherence",
+      "neomundi_field": "coherence_score",
+      "basis": "correspondance DECLAREE par cette table, a confronter a la definition de chaque cote",
+      "kind": "measured_value"
+    },
+    {
+      "receipt_label": "modele declare",
+      "neomundi_field": "model_requested",
+      "basis": "le modele demande, tel que chaque cote le nomme",
+      "kind": "identifier"
+    },
+    {
+      "receipt_label": "item",
+      "neomundi_field": "item_id",
+      "basis": "identifiant d item, identique de part et d autre",
+      "kind": "identifier"
+    },
+    {
+      "receipt_label": "empreinte de la reponse",
+      "neomundi_field": "response_sha256",
+      "basis": "empreinte RECALCULABLE : c est la correspondance la plus forte",
+      "kind": "digest"
+    },
+    {
+      "receipt_label": "empreinte du journal d execution 1",
+      "neomundi_field": "record_sha256",
+      "basis": "le recu annonce une empreinte de journal ; la verifier demande le journal lui-meme",
+      "requires": "le journal d execution 1",
+      "kind": "digest"
+    },
+    {
+      "receipt_label": "resultat declare",
+      "neomundi_field": "status",
+      "basis": "le recu dit `concordant`, nous disons `measured` : deux vocabulaires distincts",
+      "comparable": false,
+      "not_comparable_reason": "`concordant` et `measured` ne sont pas le meme enonce : le premier parle de deux executions entre elles, le second de la couverture de notre mesure. Les comparer serait un faux rapprochement.",
+      "kind": "statement"
+    },
+    {
+      "receipt_label": "score de stabilite declare",
+      "neomundi_field": "stability_score",
+      "basis": "correspondance declaree ; attention, `stability_score` est chez nous un AGREGAT et non un signal",
+      "kind": "measured_value"
+    },
+    {
+      "receipt_label": "empreinte du prompt",
+      "neomundi_field": "prompt_sha256",
+      "basis": "notre enregistrement declare cette empreinte ; le recu ne la porte pas",
+      "kind": "digest"
+    }
+  ]
+}
