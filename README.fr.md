@@ -279,6 +279,7 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/BINDING.fr.md`](docs/BINDING.fr.md) | lier une observation à ses preuves, les quatre niveaux de garantie, et la terminologie |
 | [`docs/REPLAY_FEASIBILITY.fr.md`](docs/REPLAY_FEASIBILITY.fr.md) | peut-on rejouer une mesure ? GO / NO-GO, et les blocages |
 | [`docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md`](docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md) | l'audit contradictoire du 5 novembre : 18 capacités, ce que chacune fait réellement |
+| [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.fr.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.fr.md) | la consolidation du 5 novembre : ce qui a changé, et les neuf réponses |
 | [`docs/FUTURE_SITE.fr.md`](docs/FUTURE_SITE.fr.md) | l'architecture prévue du site produit — non construit, non déployé |
 
 Chaque document existe en anglais et en français (`*.fr.md`).

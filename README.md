@@ -276,6 +276,7 @@ publisher.
 | [`docs/BINDING.md`](docs/BINDING.md) | binding an observation to its evidence, the four assurance levels, and the terminology |
 | [`docs/REPLAY_FEASIBILITY.md`](docs/REPLAY_FEASIBILITY.md) | can a measurement be replayed? GO / NO-GO, with the blockers |
 | [`docs/ADVERSARIAL_AUDIT_EVIDENCE_2026-11-05.md`](docs/ADVERSARIAL_AUDIT_EVIDENCE_2026-11-05.md) | the adversarial audit of 5 November: 18 capabilities, what each one really does |
+| [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md) | the 5 November consolidation: what changed, and the nine answers |
 | [`docs/FUTURE_SITE.md`](docs/FUTURE_SITE.md) | the planned architecture of the product site — not built, not deployed |
 
 Each document exists in English and in French (`*.fr.md`).
