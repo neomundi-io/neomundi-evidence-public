@@ -210,6 +210,14 @@ jobs:
         run: |
           python tests/test_bom.py
 
+      # La langue ne doit changer que la prose. Un etat, un code de sortie,
+      # un nom de champ ou une empreinte qui bouge avec la langue est un
+      # defaut. Le cas 7 MESURE la couverture du catalogue au lieu de la
+      # supposer, et le cas 13 la mesure sur 7 regimes d echec.
+      - name: Suite FR/EN -- la langue ne change que la prose
+        run: |
+          python tests/test_i18n.py "$ARCHIVE" "$FIXTURE/corpus"
+
       - name: Reconciliation -- les cinq statuts, et rien de devine
         run: |
           python adapters/receipt_import.py \

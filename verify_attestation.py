@@ -53,6 +53,31 @@ from pathlib import Path
 
 import canonical
 
+# La traduction est OPTIONNELLE : les piliers ne doivent pas dependre
+# d elle. Sans `i18n.py`, l outil rend les memes verdicts, en francais.
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+def _dis(langue: str, format_fr: str, *arguments: object) -> None:
+    """Imprime une ligne de prose, dans `langue`."""
+    modele = i18n.traduire_format(format_fr, langue)
+    print(modele % arguments if arguments else modele)
+
 PASS, FAIL, NOT_TESTED = "PASS", "FAIL", "NOT TESTED"
 
 SCHEMA_ATTESTATION = "neomundi.evidence.attestation/1"
@@ -110,7 +135,11 @@ def objet_json(octets: bytes, quoi: str) -> dict:
 class Bilan:
     """Les lignes de controle. PASS, FAIL et NOT TESTED restent trois etats."""
 
-    def __init__(self) -> None:
+    def __init__(self, langue: str = i18n.FR) -> None:
+        #: La langue d AFFICHAGE. `self.lignes` stocke toujours le
+        #: francais : c est ce qui garantit que le mode strict, le code de
+        #: sortie et le rapport JSON n en dependent pas.
+        self.langue = langue
         self.lignes: list[tuple[str, str, str]] = []
         #: Index des lignes dont le NOT TESTED est CONTINGENT, donc
         #: exigibles en mode strict. Jamais les limites permanentes. On
@@ -129,7 +158,10 @@ class Bilan:
         if requis:
             self.requis.append(len(self.lignes))
         self.lignes.append((etat, intitule, detail))
-        print("[%-10s] %s%s" % (etat, intitule, " - " + detail if detail else ""))
+        # L etat n est JAMAIS traduit : les trois sont des termes du contrat.
+        vu = i18n.traduire(intitule, self.langue)
+        vu_detail = i18n.traduire(detail, self.langue)
+        print("[%-10s] %s%s" % (etat, vu, " - " + vu_detail if vu_detail else ""))
 
     def compte(self, etat: str) -> int:
         return sum(1 for l in self.lignes if l[0] == etat)
@@ -667,15 +699,19 @@ def arguments_de_verification(
 
 
 def verifier(arguments: argparse.Namespace) -> tuple[Bilan, str | None, dict]:
-    bilan = Bilan()
+    bilan = Bilan(arguments.lang)
     contexte: dict[str, object] = {}
 
-    print("Attestation : %s" % arguments.attestation)
+    _dis(bilan.langue, "Attestation : %s", arguments.attestation)
     if not arguments.attestation.is_file():
         bilan.dire(FAIL, "attestation lisible", "%s introuvable" % arguments.attestation)
         return bilan, None, contexte
-    print("empreinte   : %s" % sha256_fichier(arguments.attestation))
-    print("magasin     : %s\n" % (arguments.trust_store or "aucun"))
+    _dis(bilan.langue, "empreinte   : %s",
+         sha256_fichier(arguments.attestation))
+    _dis(bilan.langue, "magasin     : %s",
+         arguments.trust_store
+         or i18n.traduire("aucun", bilan.langue))
+    print()
 
     try:
         e, c, s = decoupe(arguments.attestation.read_text(encoding="ascii", errors="strict"))
@@ -756,34 +792,40 @@ def niveau_derive(bilan: Bilan) -> str | None:
 
 def rendre(bilan: Bilan, niveau: str | None, contexte: dict,
            arguments: argparse.Namespace) -> int:
-    print("\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
-          % (bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED)))
+    langue = bilan.langue
+    print()
+    _dis(langue, "BILAN : %d PASS, %d FAIL, %d NOT TESTED",
+         bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED))
 
     if bilan.compte(FAIL):
-        print("Cette attestation ne doit pas etre presentee comme verifiee.")
+        _dis(langue, "Cette attestation ne doit pas etre presentee comme verifiee.")
     elif niveau == ATTESTE:
-        print("Niveau atteint : %s" % ATTESTE)
-        print("Soit : une partie identifiee s est engagee sur l empreinte de cette")
-        print("archive, et l archive que vous tenez est bien celle-la. Ce n est ni une")
-        print("preuve que l execution a eu lieu, ni une preuve de la DATE : celle-ci")
-        print("reste declaree faute d ancrage tiers.")
+        # `ATTESTE` est un terme du contrat : il ne se traduit pas.
+        _dis(langue, "Niveau atteint : %s", ATTESTE)
+        _dis(langue, "Soit : une partie identifiee s est engagee sur l empreinte de cette")
+        _dis(langue, "archive, et l archive que vous tenez est bien celle-la. Ce n est ni une")
+        _dis(langue, "preuve que l execution a eu lieu, ni une preuve de la DATE : celle-ci")
+        _dis(langue, "reste declaree faute d ancrage tiers.")
     else:
-        print("Niveau atteint : AUCUN au-dela de l integrite.")
-        print("Des piliers n ont pas pu etre eprouves -- voir les lignes NOT TESTED.")
+        _dis(langue, "Niveau atteint : AUCUN au-dela de l integrite.")
+        _dis(langue, "Des piliers n ont pas pu etre eprouves -- voir les lignes NOT TESTED.")
 
     manquantes = bilan.requises_non_demontrees()
     if arguments.strict:
         if manquantes:
-            print(
-                "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
-                % len(manquantes)
-            )
+            print()
+            _dis(langue,
+                 "MODE STRICT : %d garantie(s) requise(s) non demontree(s) :",
+                 len(manquantes))
             for m in manquantes:
-                print("  - %s" % m)
-            print("Aucun verdict n a change : ces lignes restent telles qu affichees.")
-            print("Seul le code de sortie en tient compte (2).")
+                # `manquantes` porte les intitules FRANCAIS : ils se
+                # traduisent ici, comme a l impression d une ligne.
+                print("  - %s" % i18n.traduire(m, langue))
+            _dis(langue, "Aucun verdict n a change : ces lignes restent telles qu affichees.")
+            _dis(langue, "Seul le code de sortie en tient compte (2).")
         else:
-            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+            print()
+            _dis(langue, "MODE STRICT : toutes les garanties requises sont demontrees.")
 
     if arguments.json:
         attestation = contexte.get("attestation") or {}
@@ -840,6 +882,13 @@ def main() -> int:
                            help="accepter explicitement une cle de statut `test`")
     analyseur.add_argument("--json", type=Path, default=None, metavar="FICHIER",
                            help="ecrire aussi un rapport lisible par machine")
+    analyseur.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
     analyseur.add_argument(
         "--strict", action="store_true",
         help="sortir en code 2 si une garantie REQUISE n est pas demontree. Ne "
