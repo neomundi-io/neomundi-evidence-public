@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neomundi.io/schemas/evidence-manifest-v1.json",
+  "title": "NeoMundi Evidence manifest, version 1",
+  "description": "Binds one observation of a NeoMundi measurement to external artifacts. A manifest is a set of CLAIMS. The level of assurance actually demonstrated is DERIVED by the verifier from the artifacts it can recompute, never read from this document. Lie une observation d'une mesure NeoMundi a des artefacts externes. Un manifeste est un ensemble de REVENDICATIONS. Le niveau de garantie reellement demontre est DERIVE par le verificateur a partir des artefacts qu'il peut recalculer, jamais lu dans ce document.",
+  "type": "object",
+  "required": ["schema", "created_at", "subject", "declared_digests", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "neomundi.evidence.manifest/1"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "When this manifest was written, as declared by its author. Not independently verifiable: no trusted clock is involved.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "subject": {
+      "type": "object",
+      "description": "The observation this manifest is about.",
+      "required": ["observation_id"],
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": { "type": "string", "minLength": 1 },
+        "record_sha256": { "$ref": "#/$defs/sha256" },
+        "prev_record_sha256": { "$ref": "#/$defs/sha256" },
+        "code_commit": { "type": "string" },
+        "comparability_key": { "type": "string" },
+        "measurement_version": { "type": "string" },
+        "source_archive": {
+          "type": "object",
+          "description": "The Evidence archive the subject was read from. Its sha256 is the only link between this manifest and a specific archive; kept elsewhere, it is also the only defence against a wholly rebuilt archive.",
+          "required": ["name", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "declared_digests": {
+      "type": "object",
+      "description": "Digests the OBSERVATION RECORD itself declares, copied here verbatim. They are the anchor: an artifact is bound only when its bytes hash to one of these. Copying them does not make them true; the record that carries them is hash-chained, which is what gives them weight.",
+      "additionalProperties": { "$ref": "#/$defs/sha256" },
+      "propertyNames": {
+        "enum": [
+          "response_sha256",
+          "prompt_sha256",
+          "request_sha256",
+          "config_snapshot_sha256",
+          "recording_sha256",
+          "bundle_sha256"
+        ]
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Files offered as the external objects the record refers to.",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "role", "path", "sha256", "binds_to", "claimed_assurance"],
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": { "type": "string", "minLength": 1 },
+          "role": {
+            "type": "string",
+            "description": "What this file is held to be.",
+            "enum": ["response", "prompt", "request", "config_snapshot", "recording", "bundle", "other"]
+          },
+          "path": {
+            "type": "string",
+            "description": "Relative path, resolved against the root given to the verifier. Must stay inside it: no absolute path, no parent traversal, no symlink.",
+            "minLength": 1
+          },
+          "media_type": { "type": "string" },
+          "size_bytes": { "type": "integer", "minimum": 0 },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "binds_to": {
+            "description": "Which declared digest this artifact is held to match. `null` means the artifact is offered with no anchor in the record, and no level above `declared` can ever be derived for it.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "enum": [
+                  "response_sha256",
+                  "prompt_sha256",
+                  "request_sha256",
+                  "config_snapshot_sha256",
+                  "recording_sha256",
+                  "bundle_sha256"
+                ]
+              }
+            ]
+          },
+          "declared_origin": {
+            "type": "string",
+            "description": "Where the author says this file came from. Free text, never verified."
+          },
+          "claimed_assurance": { "$ref": "#/$defs/assurance" }
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Detached signatures over this manifest. No verifier in this repository checks a signature, so a non-empty list can never raise the derived level: it is reported as NOT TESTED, and a claim of `cryptographically_attested` is refused.",
+      "items": {
+        "type": "object",
+        "required": ["algorithm", "key_id", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "algorithm": { "type": "string" },
+          "key_id": { "type": "string" },
+          "value": { "type": "string" },
+          "covers": { "type": "string" }
+        }
+      }
+    },
+    "statements": {
+      "type": "array",
+      "description": "Prose the author wishes to attach: what was run, when, by whom. NEVER evidence of anything. A textual description of an execution is not proof that the execution took place, and the verifier says so on every run.",
+      "items": { "type": "string" }
+    },
+    "limits": {
+      "type": "array",
+      "description": "What this manifest does not establish, in its author's own words.",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "assurance": {
+      "description": "declared: asserted in this document, nothing recomputed. reference_verifiable: the artifact is present and its bytes hash to a digest the record declares. cryptographically_attested: a signature by an identified key verifies -- NOT IMPLEMENTED anywhere in this repository, so never derivable today. not_demonstrable: out of reach of any local check.",
+      "enum": [
+        "declared",
+        "reference_verifiable",
+        "cryptographically_attested",
+        "not_demonstrable"
+      ]
+    }
+  }
+}

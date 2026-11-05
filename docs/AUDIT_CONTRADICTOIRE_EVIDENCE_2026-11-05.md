@@ -237,3 +237,26 @@ Il porte sur un dépôt et deux archives. Il ne dit rien du paquet de preuves
 annoncé par le pilote — **non fourni, donc non vérifié**. Il ne dit rien non
 plus de l'API, des moteurs de mesure ni du tableau de bord, qui n'ont été ni
 inspectés ni appelés.
+
+---
+
+## Suites données, au terme de la mission du 5 novembre
+
+| Constat | État | Où |
+|---|---|---|
+| **A-01** plantage sur entrée malformée | **corrigé** | gardes `texte` / `objet_json` / `lignes_jsonl`, isolation par `execute`, et un `BILAN` rendu sur tous les chemins. Les 9 entrées malformées rendent désormais un verdict motivé |
+| **A-02** aucune sortie lisible par machine | **corrigé** | `verify.py --json`, `bind.py verify --json` ; la sortie texte est inchangée |
+| **A-03** aucune vérification de signature | **inchangé, et assumé** | reste une limite réelle. `cryptographically_attested` est déclarable mais jamais dérivable |
+| **A-04** forme du manifeste non validée | **corrigé** | contrôle de type dans `controle_schema`, sans ligne `PASS` ajoutée |
+| **A-05** divergence d'indicateurs d'un pilote | **non instruit ici** | relève du dépôt du tableau de bord ; aucun paquet n'a été fourni |
+
+Les capacités 13 à 15 — reconstruction, rejeu, vérification de rejeu —
+**restent absentes**. L'étude de faisabilité conclut `NO-GO` sur le rejeu de
+la mesure à résultat identique : voir [REPLAY_FEASIBILITY](REPLAY_FEASIBILITY.fr.md).
+
+La capacité 18 — compatibilité avec des preuves externes — passe de
+**ABSENTE** à **PARTIELLE** : voir [BINDING](BINDING.fr.md).
+
+Lignes de base revérifiées après toutes les corrections, et identiques :
+GROUNDED-S1 **19 PASS / 0 FAIL / 2 NOT TESTED** sur 21 lignes, MED
+**10 / 0 / 8** sur 18 lignes, falsification **10/10** plus une limite déclarée.

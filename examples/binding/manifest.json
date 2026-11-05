@@ -1,0 +1,54 @@
+{
+  "schema": "neomundi.evidence.manifest/1",
+  "created_at": "2026-11-05T12:00:00Z",
+  "subject": {
+    "observation_id": "obs-4ccb376ae792defbc28dbf1fba065bdd00add90ffdaec6648b1a98e59fb7835d",
+    "record_sha256": "9bf71b77083e13fb15efc178b3fa5f44ae847360084b531a9c0d045c4b73ac54",
+    "prev_record_sha256": "855ff9334fd3ea89484a793b0cb1796df4f1302e9fe5d78577a2d32c4067bf1f",
+    "code_commit": "a52715d39383c71d2fbded47cf65ebeadc381317",
+    "comparability_key": "gen:v1:9f47736cd71a13ca6ba0f9ee74659676f47321c91609d9dcae07b0953f6d6ffe",
+    "measurement_version": "3.3.1",
+    "source_archive": {
+      "name": "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip",
+      "sha256": "84ff0decfbc12a71034412a2a8f55f7f89f21dc850b49a4b144ebc2075ea516c"
+    }
+  },
+  "declared_digests": {
+    "bundle_sha256": "d84722b4f4db3af939c456f3a535e484cabffbaabcbc69f684dc997fce05f7e1",
+    "config_snapshot_sha256": "7882f080d33bec309c406a8903d1f0dc0263fdc98d7b057c453a165761c815ec",
+    "prompt_sha256": "41c449d8f078ed7dadb7bdd2de6e68004449fb426ab979cb8ce99e1794dca60a",
+    "recording_sha256": "202b4af969851f638243c8cc33932cfbee376595a1843d26e0ecbf4ede38a11c",
+    "request_sha256": "41c449d8f078ed7dadb7bdd2de6e68004449fb426ab979cb8ce99e1794dca60a",
+    "response_sha256": "59eb95058a10c87133f8df4918b0528c88cde18ffa9667a5102209014789eb9b"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "art-01",
+      "role": "response",
+      "path": "response.txt",
+      "size_bytes": 269,
+      "sha256": "59eb95058a10c87133f8df4918b0528c88cde18ffa9667a5102209014789eb9b",
+      "binds_to": "response_sha256",
+      "claimed_assurance": "reference_verifiable"
+    },
+    {
+      "artifact_id": "art-02",
+      "role": "recording",
+      "path": "responses/grounded-009.json",
+      "size_bytes": 1026,
+      "sha256": "202b4af969851f638243c8cc33932cfbee376595a1843d26e0ecbf4ede38a11c",
+      "binds_to": "recording_sha256",
+      "claimed_assurance": "reference_verifiable"
+    }
+  ],
+  "signatures": [],
+  "statements": [
+    "Lot GROUNDED-S1, item 00ff4465, rejoue depuis l enregistrement gele du 2026-10-22."
+  ],
+  "limits": [
+    "Une correspondance d empreinte etablit qu un fichier est celui auquel l enregistrement se refere. Elle n etablit pas que l execution a eu lieu.",
+    "Aucune signature n est verifiee : ce depot n en implemente aucune.",
+    "`created_at` et `declared_origin` sont declares par l auteur du manifeste et ne sont contredits par rien.",
+    "Un faussaire qui reconstruit a la fois l archive et les artefacts produit un ensemble coherent. Seule une empreinte conservee ailleurs le detecte."
+  ]
+}

@@ -1,0 +1,3 @@
+This is a synthetic answer written for the offline bench. It carries no clinical reasoning and attests nothing about any model. Its only purpose is to give the chain a text of plausible length to measure. The letter below is chosen by rank, not by knowledge.
+
+Answer: B

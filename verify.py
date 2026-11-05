@@ -207,6 +207,30 @@ def controle_schema(bilan: Bilan, manifeste: dict[str, object], noms: list[str])
             % (schema, ", ".join(SCHEMAS_CONNUS)),
         )
         return None
+    # A-04 de l audit du 5 novembre : la forme du manifeste etait non verifiee.
+    # Un `decomptes` au mauvais type faisait echouer un controle ULTERIEUR par
+    # accident, et le lecteur du rapport l imputait a la preuve plutot qu au
+    # document. Aucune ligne PASS n est ajoutee ici : les decomptes publies de
+    # 21 et 18 lignes sont cites par des documents figes.
+    malformes = []
+    # `fichiers` est une LISTE de noms dans les deux schemas, pas une table :
+    # l avoir suppose dict faisait echouer les deux archives valides.
+    for cle, type_attendu in (("decomptes", dict), ("fichiers", list), ("absences", dict)):
+        valeur = manifeste.get(cle)
+        if valeur is not None and not isinstance(valeur, type_attendu):
+            malformes.append(
+                "%s : attendu %s, recu %s" % (cle, type_attendu.__name__, type(valeur).__name__)
+            )
+    decomptes = manifeste.get("decomptes")
+    if isinstance(decomptes, dict):
+        malformes += [
+            "decomptes.%s : attendu un entier, recu %s" % (c, type(v).__name__)
+            for c, v in sorted(decomptes.items())
+            if not isinstance(v, int) or isinstance(v, bool)
+        ]
+    if malformes:
+        bilan.dire(FAIL, "forme du manifeste", "; ".join(malformes[:5]))
+
     attendus = MEMBRES_PAR_SCHEMA[schema]
     manquants = [m for m in attendus if m not in noms]
     surplus = [n for n in noms if n not in attendus]
@@ -705,6 +729,14 @@ def main() -> int:
         default=None,
         help="repertoire du corpus d entree, pour verifier les empreintes des entrees rejouees",
     )
+    analyseur.add_argument(
+        "--json",
+        type=Path,
+        default=None,
+        metavar="FICHIER",
+        help="ecrire aussi un rapport lisible par machine. La sortie texte reste "
+        "identique : ce fichier s ajoute, il ne remplace rien.",
+    )
     arguments = analyseur.parse_args()
 
     bilan = Bilan()
@@ -720,6 +752,38 @@ def main() -> int:
     )
     if bilan.compte(FAIL):
         print("Ce dossier ne doit pas etre presente comme verifie.")
+
+    if arguments.json:
+        # Les trois etats restent trois champs distincts : un consommateur qui
+        # ne lirait que `pass` et `fail` croirait a une couverture complete.
+        rapport = {
+            "schema": "neomundi.evidence.verification-report/1",
+            "archive": str(arguments.archive),
+            "archive_sha256": (
+                sha256_fichier(arguments.archive) if arguments.archive.is_file() else None
+            ),
+            "corpus": str(arguments.corpus) if arguments.corpus else None,
+            "controls": [
+                {"state": etat, "control": intitule, "detail": detail}
+                for etat, intitule, detail in bilan.lignes
+            ],
+            "counts": {
+                "pass": bilan.compte(PASS),
+                "fail": bilan.compte(FAIL),
+                "not_tested": bilan.compte(NOT_TESTED),
+            },
+            "verdict": "fail" if bilan.compte(FAIL) else "no_failure",
+            "does_not_establish": [
+                "authenticity: no signature is verified by this tool",
+                "origin: no trusted clock, no external anchor",
+                "that the execution took place",
+            ],
+        }
+        arguments.json.write_text(
+            json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print("rapport lisible par machine : %s" % arguments.json)
+
     return bilan.code_de_sortie()
 
 

@@ -1,0 +1,31 @@
+{
+  "provider": "synthetic:grounded-s1",
+  "model_requested": "grounded-s1-2026-10-22",
+  "model_served": "grounded-s1-2026-10-22",
+  "model_served_attestation": "provider_attested",
+  "sent_at": "2026-10-22T09:00:00Z",
+  "received_at": "2026-10-22T09:00:00.512000Z",
+  "latency_ms": 512,
+  "params_sent": {
+    "temperature": 0,
+    "max_completion_tokens": 1000
+  },
+  "params_effective": {
+    "temperature": 0,
+    "max_completion_tokens": 1000
+  },
+  "status": "ok",
+  "attempts_emitted": 1,
+  "response_text": "This is a synthetic answer written for the offline bench. It carries no clinical reasoning and attests nothing about any model. Its only purpose is to give the chain a text of plausible length to measure. The letter below is chosen by rank, not by knowledge.\n\nAnswer: B",
+  "finish_reason": "stop",
+  "system_fingerprint": null,
+  "usage": {
+    "tokens_input": 143,
+    "tokens_output": 67,
+    "tokens_total": 210
+  },
+  "cost": null,
+  "failure_category": null,
+  "failure_code": null,
+  "error": null
+}
