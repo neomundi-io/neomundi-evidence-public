@@ -18,6 +18,7 @@
 readable, and checkable by its recipient without us.**
 
 [![Evidence: V0.1](https://img.shields.io/badge/Evidence-V0.1-475569?style=flat-square)](#what-an-evidence-file-contains)
+[![tests](https://github.com/neomundi-io/neomundi-evidence-public/actions/workflows/tests.yml/badge.svg)](https://github.com/neomundi-io/neomundi-evidence-public/actions/workflows/tests.yml)
 [![Independent Verification](https://img.shields.io/badge/Independent_Verification-no_dependencies-0f766e?style=flat-square)](#verify-an-evidence-file)
 [![Integrity: SHA-256](https://img.shields.io/badge/Integrity-SHA--256-0f766e?style=flat-square)](docs/EXTERNAL_REFERENCE.md)
 [![Tamper Detection: 10/10 tested](https://img.shields.io/badge/Tamper_Detection-10%2F10_tested-0f766e?style=flat-square)](#tamper-detection-tests)
@@ -273,6 +274,7 @@ publisher.
 | [`docs/CORPUS_REFERENCE.md`](docs/CORPUS_REFERENCE.md) | the corpora, their hashes, and how an auditor checks them |
 | [`docs/EXTERNAL_REFERENCE.md`](docs/EXTERNAL_REFERENCE.md) | verifying from an independently kept hash — and why an internal hash attests nothing |
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
+| [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
 | [`docs/ATTESTATION.md`](docs/ATTESTATION.md) | the signed attestation: how `cryptographically_attested` is reached, and the 23-case matrix |
 | [`docs/CP8_ADAPTER_SPEC.md`](docs/CP8_ADAPTER_SPEC.md) | external receipt adapter — specification only, no code |
 | [`docs/BINDING.md`](docs/BINDING.md) | binding an observation to its evidence, the four assurance levels, and the terminology |

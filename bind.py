@@ -353,16 +353,42 @@ class Bilan:
 
     def __init__(self) -> None:
         self.lignes: list[tuple[str, str, str]] = []
+        #: Index des lignes dont le NOT TESTED est CONTINGENT -- celles qui
+        #: deviendraient PASS si l appelant fournissait ce qui manque. On
+        #: retient l index et non l intitule : plusieurs intitules sont
+        #: construits, donc un ensemble de noms serait fragile.
+        self.requis: list[int] = []
 
-    def dire(self, etat: str, intitule: str, detail: str = "") -> None:
+    def dire(self, etat: str, intitule: str, detail: str = "",
+             requis: bool = False) -> None:
+        """Inscrit une ligne. `requis` ne change NI l etat NI l affichage.
+
+        Il ne sert qu au code de sortie en mode strict.
+        """
+        if requis:
+            self.requis.append(len(self.lignes))
         self.lignes.append((etat, intitule, detail))
         print("[%-10s] %s%s" % (etat, intitule, " - " + detail if detail else ""))
+
+    def requises_non_demontrees(self) -> list[str]:
+        """Les garanties requises qui ne sont pas `PASS`."""
+        return [self.lignes[i][1] for i in self.requis if self.lignes[i][0] != PASS]
 
     def compte(self, etat: str) -> int:
         return sum(1 for l in self.lignes if l[0] == etat)
 
-    def code_de_sortie(self) -> int:
-        return 1 if self.compte(FAIL) else 0
+    def code_de_sortie(self, strict: bool = False) -> int:
+        """0 sain, 1 au moins un FAIL, 2 garantie requise non demontree.
+
+        Un `FAIL` l emporte : c est l enonce le plus fort, et un
+        consommateur qui ne distingue pas les codes non nuls n est pas
+        induit en erreur pour autant.
+        """
+        if self.compte(FAIL):
+            return 1
+        if strict and self.requises_non_demontrees():
+            return 2
+        return 0
 
 
 def controle_forme(bilan: Bilan, manifeste: dict) -> bool:
@@ -451,6 +477,7 @@ def controle_sujet(bilan: Bilan, manifeste: dict, archive: Path | None) -> None:
             "le sujet existe dans son archive",
             "archive non fournie. La fournir avec --archive <fichier> pour que "
             "les empreintes declarees soient confrontees a l enregistrement.",
+            requis=True,
         )
         return
 
@@ -564,6 +591,7 @@ def controle_artefacts(
                 "fichier absent sous la racine : %s. Sa revendication `%s` n a pas "
                 "pu etre eprouvee ; elle n est pas contredite pour autant."
                 % (relatif, revendique),
+                requis=True,
             )
             verdict["verifiable_here"] = False
             verdict["problems"].append("fichier absent sous la racine")
@@ -578,6 +606,7 @@ def controle_artefacts(
                 "%d octets, au-dela du plafond de %d. Non lu : relever le "
                 "plafond avec --max-artifact-bytes pour l eprouver."
                 % (taille, plafond),
+                requis=True,
             )
             verdict["verifiable_here"] = False
             verdict["observed_size_bytes"] = taille
@@ -675,6 +704,7 @@ def controle_attestation(bilan: Bilan, verdicts: list[dict],
             "attestation de l archive du sujet",
             "aucune attestation fournie. La fournir avec --attestation <fichier.jws> "
             "--trust-store <magasin> pour que le niveau `%s` soit atteignable." % ATTESTE,
+            requis=True,
         )
         return False
 
@@ -777,6 +807,7 @@ def controle_revendications(bilan: Bilan, verdicts: list[dict]) -> None:
                 NOT_TESTED,
                 "aucune revendication ne depasse ce qui est demontre",
                 "aucune revendication n a pu etre eprouvee : rien n est affirme ici.",
+                requis=True,
             )
         else:
             bilan.dire(
@@ -790,6 +821,7 @@ def controle_revendications(bilan: Bilan, verdicts: list[dict]) -> None:
             "revendications non eprouvees faute d artefact",
             "%s. Fournir les fichiers sous --root pour les eprouver."
             % ", ".join(non_eprouvees[:4]),
+            requis=True,
         )
 
 
@@ -953,9 +985,25 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
                     "manifeste est un document, pas une preuve."
                 )
 
+    manquantes = bilan.requises_non_demontrees()
+    if arguments.strict:
+        if manquantes:
+            print(
+                "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
+                % len(manquantes)
+            )
+            for m in manquantes:
+                print("  - %s" % m)
+            print("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
+        else:
+            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+
     if arguments.json:
         rapport = {
             "schema": "neomundi.evidence.binding-report/1",
+            "strict": bool(arguments.strict),
+            "required_not_demonstrated": manquantes,
+            "exit_code": bilan.code_de_sortie(arguments.strict),
             "manifest": str(arguments.manifest),
             "controls": [
                 {"state": e, "control": i, "detail": d} for e, i, d in bilan.lignes
@@ -986,7 +1034,7 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
         )
         print("\nrapport lisible par machine : %s" % chemin)
 
-    return bilan.code_de_sortie()
+    return bilan.code_de_sortie(arguments.strict)
 
 
 # --------------------------------------------------------------------------
@@ -1047,6 +1095,12 @@ def main() -> int:
     v.add_argument(
         "--allow-test-keys", action="store_true",
         help="accepter explicitement une cle de statut `test`",
+    )
+    v.add_argument(
+        "--strict", action="store_true",
+        help="sortir en code 2 si une garantie REQUISE n est pas demontree. Ne "
+             "change AUCUN verdict : les lignes restent PASS, FAIL ou NOT TESTED "
+             "a l identique. Pour les consommateurs automatises.",
     )
     v.add_argument(
         "--max-artifact-bytes",

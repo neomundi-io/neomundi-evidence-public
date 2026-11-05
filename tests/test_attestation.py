@@ -248,7 +248,13 @@ def cas(banc: Banc) -> list[tuple[str, str, bool, str]]:
     T = banc.travail
 
     def pose(numero, intitule, reussi, constat):
-        r.append((numero, intitule, bool(reussi), constat))
+        """`reussi` a trois valeurs : True, False, et None = INAPPLICABLE.
+
+        Un cas inapplicable n est NI un succes NI un echec : il n a pas pu
+        etre eprouve dans cet environnement, et le dire est la seule reponse
+        honnete.
+        """
+        r.append((numero, intitule, reussi if reussi is None else bool(reussi), constat))
 
     # ---- 1. archive valide, signature valide, cle connue -------------------
     code, s = verifier(banc.jws, banc.archive, banc.magasin, ["--allow-test-keys"])
@@ -343,44 +349,76 @@ def cas(banc: Banc) -> list[tuple[str, str, bool, str]]:
 
     # ---- 9. archive historique NON SIGNEE : niveau conserve ---------------
     exemple = RACINE / "examples" / "binding"
-    code, s = lancer([sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
-                      "--root", str(exemple), "--archive", str(banc.archive)])
-    pose("9", "archive historique non signee : niveau conserve",
-         code == 0 and "reference_verifiable" in s
-         and etat(s, "attestation de l archive du sujet") == "NOT TESTED",
-         "liaison acceptee au niveau reference_verifiable, attestation NOT TESTED")
+    # L exemple de liaison nomme son archive et porte son empreinte. Sur une
+    # autre archive, les trois cas qui s en servent ne peuvent pas etre
+    # eprouves -- et le dire vaut mieux que de les faire echouer, ou pire,
+    # de les faire passer pour la mauvaise raison.
+    manifeste_exemple = json.loads((exemple / "manifest.json").read_text(encoding="utf-8"))
+    empreinte_attendue = (
+        manifeste_exemple.get("subject", {}).get("source_archive", {}).get("sha256")
+    )
+    liaison_applicable = empreinte_attendue == sha256(banc.archive.read_bytes())
+    raison_inapplicable = (
+        "l exemple de liaison porte sur une autre archive (%s...)"
+        % (empreinte_attendue or "?")[:16]
+    )
+    if not liaison_applicable:
+        pose("9", "archive historique non signee : niveau conserve",
+             None, raison_inapplicable)
+        code, s = 0, ""
+    else:
+        code, s = lancer([sys.executable, str(BIND), "verify",
+                          str(exemple / "manifest.json"),
+                          "--root", str(exemple), "--archive", str(banc.archive)])
+        pose("9", "archive historique non signee : niveau conserve",
+             code == 0 and "reference_verifiable" in s
+             and etat(s, "attestation de l archive du sujet") == "NOT TESTED",
+             "liaison acceptee au niveau reference_verifiable, attestation NOT TESTED")
 
     # ---- 9b. bind.py --attestation : l ELEVATION TRANSITIVE ---------------
     # Cas ajoute le 6 novembre, en revue : ce chemin n etait couvert par
     # AUCUN test, et il etait CASSE -- `bind.py` rebatissait a la main le jeu
     # d arguments du verificateur, et une option ajoutee ensuite le faisait
     # echouer par AttributeError. Un chemin non teste est un chemin casse.
-    code, s = lancer([
-        sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
-        "--root", str(exemple), "--archive", str(banc.archive),
-        "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
-        "--allow-test-keys",
-    ])
-    eleves = "cryptographically_attested" in s and "eleve(s) de" in s
-    pose("9b", "bind.py --attestation : elevation transitive des artefacts",
-         code == 0 and eleves
-         and etat(s, "attestation de l archive du sujet") == "PASS"
-         and "Niveau de garantie DERIVE pour la liaison : cryptographically_attested" in s,
-         "liaison elevee a cryptographically_attested"
-         if eleves else "ELEVATION ABSENTE -- %s" % (motif_bind(s) or "sans motif"))
+    if not liaison_applicable:
+        pose("9b", "bind.py --attestation : elevation transitive des artefacts",
+             None, raison_inapplicable)
+    else:
+        code, s = lancer([
+            sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
+            "--root", str(exemple), "--archive", str(banc.archive),
+            "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
+            "--allow-test-keys",
+        ])
+        eleves = "cryptographically_attested" in s and "eleve(s) de" in s
+        pose("9b", "bind.py --attestation : elevation transitive des artefacts",
+             code == 0 and eleves
+             and etat(s, "attestation de l archive du sujet") == "PASS"
+             and "Niveau de garantie DERIVE pour la liaison : cryptographically_attested" in s,
+             "liaison elevee a cryptographically_attested"
+             if eleves else "ELEVATION ABSENTE -- %s" % (motif_bind(s) or "sans motif"))
 
     # ---- 9c. bind.py --attestation avec une attestation NON valide --------
     # L elevation ne doit pas se produire, et la liaison doit retomber.
-    code, s = lancer([
-        sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
-        "--root", str(exemple), "--archive", str(banc.archive),
-        "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
-    ])  # sans --allow-test-keys : l attestation n atteint pas le niveau
-    pose("9c", "bind.py --attestation non fiable : aucune elevation",
-         code != 0 and etat(s, "attestation de l archive du sujet") == "FAIL"
-         and "cryptographically_attested" not in s.split("BILAN")[-1],
-         "elevation refusee -- une attestation qui n atteint pas le niveau "
-         "n eleve rien")
+    if not liaison_applicable:
+        # Celui-ci PASSAIT pour la mauvaise raison : il attend un FAIL et en
+        # obtenait un, mais celui de << l archive n est pas celle du
+        # manifeste >>, pas celui de la confiance refusee.
+        pose("9c", "bind.py --attestation non fiable : aucune elevation",
+             None, raison_inapplicable)
+    else:
+        code, s = lancer([
+            sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
+            "--root", str(exemple), "--archive", str(banc.archive),
+            "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
+        ])  # sans --allow-test-keys : l attestation n atteint pas le niveau
+        pose("9c", "bind.py --attestation non fiable : aucune elevation",
+             code != 0
+             and etat(s, "attestation de l archive du sujet") == "FAIL"
+             # et pour la BONNE raison : la cle de test est refusee
+             and "statut `test`" in s
+             and "cryptographically_attested" not in s.split("BILAN")[-1],
+             "elevation refusee pour la bonne raison : cle de test non autorisee")
 
     # ---- 10. non-regression ------------------------------------------------
     code_g, s_g = lancer([sys.executable, str(VERIFY), str(banc.archive),
@@ -577,14 +615,23 @@ def main() -> int:
         print("\n[cles ephemeres effacees]")
 
     print()
-    echecs = []
+    echecs, inapplicables = [], []
     for numero, intitule, reussi, constat in resultats:
+        if reussi is None:
+            etiquette = "INAPPLIC."
+            inapplicables.append("%s %s" % (numero, intitule))
+        else:
+            etiquette = "OK" if reussi else "PROBLEME"
+            if not reussi:
+                echecs.append("%s %s" % (numero, intitule))
         print("[%-9s] %-3s %-58s %s"
-              % ("OK" if reussi else "PROBLEME", numero, intitule[:58], constat[:70]))
-        if not reussi:
-            echecs.append("%s %s" % (numero, intitule))
+              % (etiquette, numero, intitule[:58], constat[:70]))
 
-    print("\nBILAN : %d/%d cas conformes" % (len(resultats) - len(echecs), len(resultats)))
+    eprouves = len(resultats) - len(inapplicables)
+    print("\nBILAN : %d/%d cas conformes, %d inapplicable(s)"
+          % (eprouves - len(echecs), eprouves, len(inapplicables)))
+    for i in inapplicables:
+        print("  inapplicable : %s" % i)
     for e in echecs:
         print("  - %s" % e)
 
