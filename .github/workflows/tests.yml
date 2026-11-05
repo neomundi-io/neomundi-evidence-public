@@ -117,15 +117,18 @@ jobs:
 
       - name: Suite de falsification
         run: |
-          python tests/test_falsification.py "$ARCHIVE" "$FIXTURE/corpus" | tail -20
+          python tests/test_falsification.py "$ARCHIVE" "$FIXTURE/corpus"
 
       - name: Sonde contradictoire
         run: |
-          python tests/test_adversarial.py "$ARCHIVE" "$FIXTURE/corpus" | tail -20
+          # Pas de `tail` : le BILAN de cette suite est suivi de 22 lignes, et
+          # un `tail -20` le coupait -- une CI qui cache son resume est
+          # moins utile qu une CI verbeuse.
+          python tests/test_adversarial.py "$ARCHIVE" "$FIXTURE/corpus"
 
       - name: Suite d attestation
         run: |
-          python tests/test_attestation.py "$ARCHIVE" "$FIXTURE/corpus" | tail -35
+          python tests/test_attestation.py "$ARCHIVE" "$FIXTURE/corpus"
 
       - name: Suite de liaison
         run: |
@@ -139,7 +142,7 @@ jobs:
             --artifact recording=responses/fixture-a.json \
             --created-at 2026-01-01T00:00:00Z --out manifest.json > /dev/null
           cd "$GITHUB_WORKSPACE"
-          python tests/test_binding.py "$ARCHIVE" "$FIXTURE/binding" | tail -12
+          python tests/test_binding.py "$ARCHIVE" "$FIXTURE/binding"
 
       - name: L exemple d attestation commite se verifie toujours
         run: |
