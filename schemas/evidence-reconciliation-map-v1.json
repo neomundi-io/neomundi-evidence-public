@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neomundi.io/schemas/evidence-reconciliation-map-v1.json",
+  "title": "NeoMundi Evidence reconciliation map, version 1",
+  "description": "An EXPLICIT table of correspondences between a receipt's labels and NeoMundi fields. Required, because deciding that a third party's score corresponds to ours is a claim about two definitions, and no extractor can make it. Without an entry, a field is NOT COMPARABLE. Une table EXPLICITE de correspondances. Exigee, parce que decider qu'un score tiers correspond au notre est une affirmation sur deux definitions.",
+  "type": "object",
+  "required": [
+    "schema",
+    "mappings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "neomundi.evidence.reconciliation-map/1"
+    },
+    "note": {
+      "type": "string"
+    },
+    "receipt_context": {
+      "type": "object",
+      "description": "The measurement context the RECEIPT declares. Compared with ours BEFORE any value: two values are a computation divergence only if they measure the same thing. An undeclared context makes every measured value NOT COMPARABLE -- which is the honest outcome, not a failure.",
+      "additionalProperties": true,
+      "properties": {
+        "measurement_version": {
+          "type": "string"
+        },
+        "measurement_coverage": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "score_definition": {
+          "type": "string"
+        },
+        "our_score_definition": {
+          "type": "string"
+        }
+      }
+    },
+    "mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "receipt_label",
+          "neomundi_field",
+          "basis"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "receipt_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "neomundi_field": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must exist in our records. Targeting a field that does not is refused LOUDLY, never reported as a silent MISSING."
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WHY these two are held to correspond. Mandatory: an unexplained correspondence is a guess."
+          },
+          "kind": {
+            "enum": [
+              "digest",
+              "identifier",
+              "measured_value",
+              "statement"
+            ],
+            "default": "measured_value",
+            "description": "Decides whether a comparability boundary applies. A DIGEST matches or does not: the measurement version changes nothing, and calling it NOT COMPARABLE would destroy the strongest evidence available. Only `measured_value` is context-sensitive."
+          },
+          "requires": {
+            "type": "string",
+            "description": "Material needed to VERIFY this field (a log, a key). If not supplied via --supplied, the field is NOT VERIFIABLE -- which is our inability to check, not a divergence."
+          },
+          "comparable": {
+            "type": "boolean"
+          },
+          "not_comparable_reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

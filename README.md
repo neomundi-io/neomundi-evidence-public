@@ -277,6 +277,7 @@ publisher.
 | [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
 | [`docs/ATTESTATION.md`](docs/ATTESTATION.md) | the signed attestation: how `cryptographically_attested` is reached, and the 23-case matrix |
+| [`docs/RECONCILIATION.md`](docs/RECONCILIATION.md) | reconciling an external receipt with a NeoMundi measurement: five statuses, and why comparability comes first |
 | [`docs/CP8_ADAPTER_SPEC.md`](docs/CP8_ADAPTER_SPEC.md) | external receipt adapter — specification only, no code |
 | [`docs/BINDING.md`](docs/BINDING.md) | binding an observation to its evidence, the four assurance levels, and the terminology |
 | [`docs/REPLAY_FEASIBILITY.md`](docs/REPLAY_FEASIBILITY.md) | can a measurement be replayed? GO / NO-GO, with the blockers |

@@ -199,6 +199,57 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           python tests/test_binding.py "$ARCHIVE" "$FIXTURE/binding"
 
+      - name: Suite de reconciliation
+        run: |
+          python tests/test_reconciliation.py
+
+      - name: Reconciliation -- les cinq statuts, et rien de devine
+        run: |
+          python adapters/receipt_import.py \
+            examples/reconciliation/receipt-synthetic.html \
+            --received-at 2026-11-05T12:00:00Z --out "$RUNNER_TEMP/recu.json" > /dev/null
+          python adapters/reconcile.py "$RUNNER_TEMP/recu.json" \
+            --archive "$ARCHIVE" \
+            --map examples/reconciliation/map-comparable.json \
+            --json "$RUNNER_TEMP/recon.json" > /dev/null
+          python - <<'PY'
+          import json, os
+          r = json.load(open(os.environ["RUNNER_TEMP"] + "/recon.json", encoding="utf-8"))
+          vus = set(r["counts"])
+          attendus = {"MATCHED", "MISMATCHED", "MISSING", "NOT COMPARABLE",
+                      "NOT VERIFIABLE"}
+          assert attendus <= vus, "statuts manquants : %s" % (attendus - vus)
+          # Les contradictions doivent etre CONSERVEES, les deux cotes.
+          assert r["contradictions_preserved"], "aucune contradiction conservee"
+          # Et le recu ne doit JAMAIS etre qualifie de signe.
+          texte = json.dumps(r, ensure_ascii=False).lower()
+          assert "signature verifiee" not in texte
+          print("cinq statuts distingues :",
+                ", ".join("%s=%d" % (k, v) for k, v in sorted(r["counts"].items())))
+          print("%d contradiction(s) conservee(s)" % len(r["contradictions_preserved"]))
+          PY
+
+      - name: Reconciliation -- une empreinte concorde malgre la frontiere
+        run: |
+          # Regression verrouillee : une version de mesure non declaree rendait
+          # TOUS les champs NOT COMPARABLE, y compris une empreinte qui
+          # concorde -- detruisant la preuve la plus forte du dispositif.
+          python adapters/reconcile.py "$RUNNER_TEMP/recu.json" \
+            --archive "$ARCHIVE" \
+            --map examples/reconciliation/map-no-context.json \
+            --json "$RUNNER_TEMP/recon2.json" > /dev/null
+          python - <<'PY'
+          import json, os
+          r = json.load(open(os.environ["RUNNER_TEMP"] + "/recon2.json", encoding="utf-8"))
+          par_champ = {f["neomundi_field"]: f for f in r["fields"]}
+          assert par_champ["response_sha256"]["status"] == "MATCHED", \
+              par_champ["response_sha256"]
+          assert par_champ["coherence_score"]["status"] == "NOT COMPARABLE", \
+              par_champ["coherence_score"]
+          print("empreinte MATCHED, valeur mesuree NOT COMPARABLE : la frontiere")
+          print("ne mord que sur ce qui depend du contexte de mesure.")
+          PY
+
       - name: L exemple d attestation commite se verifie toujours
         run: |
           # Sans --archive : la concordance est NOT TESTED, et c est normal.
@@ -341,6 +392,24 @@ jobs:
                                       "socket", "submit(") if m in source]
           assert not interdits, interdits
           print("verify et inspect sont hors ligne, verifie sur le graphe d appels")
+          PY
+
+      - name: La reconciliation REUTILISE bind.py, sans second moteur
+        run: |
+          python - <<'PY'
+          import ast, pathlib
+          source = pathlib.Path("adapters/reconcile.py").read_text(encoding="utf-8")
+          arbre = ast.parse(source)
+          importe = any(isinstance(n, ast.Import)
+                        and any(a.name == "bind" for a in n.names)
+                        for n in ast.walk(arbre))
+          assert importe, "reconcile.py n importe pas bind"
+          appels = {n.func.attr for n in ast.walk(arbre)
+                    if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                    and isinstance(n.func.value, ast.Name)
+                    and n.func.value.id == "bind"}
+          assert "lire_sujet" in appels, appels
+          print("bind reutilise :", ", ".join(sorted(appels)))
           PY
 
       - name: Aucun materiau de cle privee dans le suivi

@@ -280,6 +280,7 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/TIMESTAMPING.fr.md`](docs/TIMESTAMPING.fr.md) | horodatage indépendant par OpenTimestamps : ce qu'il prouve, et pourquoi `PENDING` ne prouve aucune date |
 | [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
 | [`docs/ATTESTATION.fr.md`](docs/ATTESTATION.fr.md) | l'attestation signée : comment `cryptographically_attested` est atteint, et la matrice de 23 cas |
+| [`docs/RECONCILIATION.fr.md`](docs/RECONCILIATION.fr.md) | réconcilier un reçu externe avec une mesure NeoMundi : cinq statuts, et pourquoi la comparabilité passe d'abord |
 | [`docs/CP8_ADAPTER_SPEC.fr.md`](docs/CP8_ADAPTER_SPEC.fr.md) | adaptateur de reçu externe — spécification seule, aucun code |
 | [`docs/BINDING.fr.md`](docs/BINDING.fr.md) | lier une observation à ses preuves, les quatre niveaux de garantie, et la terminologie |
 | [`docs/REPLAY_FEASIBILITY.fr.md`](docs/REPLAY_FEASIBILITY.fr.md) | peut-on rejouer une mesure ? GO / NO-GO, et les blocages |
