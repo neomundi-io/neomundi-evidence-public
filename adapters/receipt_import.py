@@ -249,7 +249,9 @@ def main() -> int:
     sortie = json.dumps(recu, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if arguments.out:
         arguments.out.parent.mkdir(parents=True, exist_ok=True)
-        arguments.out.write_text(sortie, encoding="utf-8")
+        # LF explicite : un recu normalise entre dans une chaine de
+        # reconciliation, et son empreinte ne doit pas dependre du systeme.
+        arguments.out.write_bytes(sortie.encode("utf-8"))
         print("recu normalise : %s" % arguments.out)
     else:
         sys.stdout.write(sortie)

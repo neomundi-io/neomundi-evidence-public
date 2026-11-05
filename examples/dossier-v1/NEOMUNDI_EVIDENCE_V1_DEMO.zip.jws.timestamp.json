@@ -1,0 +1,23 @@
+{
+  "calendars_silent": [],
+  "calendars_submitted": [
+    "https://alice.btc.calendar.opentimestamps.org",
+    "https://bob.btc.calendar.opentimestamps.org",
+    "https://btc.calendar.catallaxy.com",
+    "https://finney.calendar.eternitywall.com"
+  ],
+  "limits": [
+    "Une attestation `pending` n atteste AUCUNE date : elle dit qu un calendrier s est engage a inclure l empreinte dans une prochaine transaction Bitcoin.",
+    "`stamped_at_declared` est declare par nous : ce n est pas l horodatage, c est la date a laquelle nous avons soumis.",
+    "Aucun horodatage qualifie eIDAS n est revendique.",
+    "La verification du temps demande le client officiel : `ots verify <preuve>`."
+  ],
+  "proof_name": "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
+  "proof_sha256": "3c1f7db3248c008c91f40ba1c5ab4d73594a556ca3ba1340ad83ed70e6ed4811",
+  "schema": "neomundi.evidence.timestamp/1",
+  "stamped_at_declared": "2026-11-06T10:00:00Z",
+  "state_at_stamping": "pending",
+  "subject_kind": "evidence_attestation",
+  "subject_name": "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
+  "subject_sha256": "d533518f4413d75e7ea58923d21bfe6c168eba2f1cc6703dc12353abceda3493"
+}

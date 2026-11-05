@@ -250,6 +250,95 @@ jobs:
           print("ne mord que sur ce qui depend du contexte de mesure.")
           PY
 
+      - name: Le dossier V1 soumis a la revue se verifie entierement
+        run: |
+          # Les cinq chaines du dossier de revue, sur les fichiers COMMITES.
+          # Si l une se casse, la demonstration du 9 novembre se casse avec.
+          cd examples/dossier-v1
+          python ../../verify.py NEOMUNDI_EVIDENCE_V1_DEMO.zip --corpus corpus | grep '^BILAN'
+          python ../../verify_attestation.py NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
+            --archive NEOMUNDI_EVIDENCE_V1_DEMO.zip \
+            --trust-store trust-store.json --allow-test-keys | tail -5
+          python ../../timestamp.py verify NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots \
+            --subject NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
+            --descriptor NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.timestamp.json | grep '^BILAN'
+          python ../../adapters/reconcile.py receipt-imported.json \
+            --archive NEOMUNDI_EVIDENCE_V1_DEMO.zip --map map-comparable.json | grep '^BILAN'
+          cd binding
+          python ../../../bind.py verify manifest.json \
+            --archive ../NEOMUNDI_EVIDENCE_V1_DEMO.zip \
+            --attestation ../NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
+            --trust-store ../trust-store.json --allow-test-keys | tail -7
+
+      - name: Le dossier V1 -- les resultats annonces au guide sont EXACTS
+        run: |
+          # Le guide de l auditeur annonce des chiffres. S ils derivent, un
+          # relecteur du 9 novembre obtiendra autre chose que ce qu on lui a
+          # promis -- et c est exactement ce qu il ne faut pas.
+          cd examples/dossier-v1
+          python - <<'PY'
+          import re, subprocess, sys
+
+          def lance(args):
+              r = subprocess.run([sys.executable] + args, capture_output=True,
+                                 text=True, encoding="utf-8", errors="replace")
+              return r.stdout + r.stderr
+
+          attendus = [
+              (["../../verify.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
+                "--corpus", "corpus"],
+               "BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED"),
+              (["../../verify_attestation.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
+                "--archive", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
+                "--trust-store", "trust-store.json", "--allow-test-keys"],
+               "BILAN : 10 PASS, 0 FAIL, 4 NOT TESTED"),
+              (["../../timestamp.py", "verify",
+                "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
+                "--subject", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
+                "--descriptor", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.timestamp.json"],
+               "BILAN : 4 PASS, 0 FAIL, 3 NOT TESTED"),
+          ]
+          for args, attendu in attendus:
+              sortie = lance(args)
+              assert attendu in sortie, (
+                  "%s\n  attendu : %s\n  obtenu  : %s"
+                  % (args[0], attendu,
+                     next((l for l in sortie.splitlines()
+                           if l.startswith("BILAN")), "aucun BILAN")))
+              print("OK  %-28s %s" % (args[0].split("/")[-1], attendu))
+
+          # Le niveau atteint, et l etat de l horodatage.
+          att = lance(["../../verify_attestation.py",
+                       "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
+                       "--archive", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
+                       "--trust-store", "trust-store.json", "--allow-test-keys"])
+          assert "Niveau atteint : cryptographically_attested" in att, att[-400:]
+          print("OK  attestation                niveau cryptographically_attested")
+
+          ts = lance(["../../timestamp.py", "verify",
+                      "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
+                      "--subject", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws"])
+          assert "PENDING" in ts and "n atteste aucune date" in ts, ts[-400:]
+          print("OK  horodatage                 PENDING, aucune date attestee")
+          PY
+
+      - name: Le dossier V1 ne contient AUCUNE cle privee
+        run: |
+          python - <<'PY'
+          import json, pathlib, re
+          store = json.loads(
+              pathlib.Path("examples/dossier-v1/trust-store.json").read_text(encoding="utf-8"))
+          assert store.get("store_kind") == "test", store.get("store_kind")
+          for cle in store["keys"]:
+              assert cle["status"] == "test", cle
+              assert not any(c in cle for c in ("d", "private", "private_key")), cle
+          motif = re.compile(rb'"d"\s*:\s*"[A-Za-z0-9_-]{40,}"')
+          for f in pathlib.Path("examples/dossier-v1").rglob("*"):
+              if f.is_file():
+                  assert not motif.search(f.read_bytes()), f
+          print("magasin de statut `test`, aucune cle privee dans le dossier")
+          PY
+
       - name: L exemple d attestation commite se verifie toujours
         run: |
           # Sans --archive : la concordance est NOT TESTED, et c est normal.
@@ -411,6 +500,13 @@ jobs:
           assert "lire_sujet" in appels, appels
           print("bind reutilise :", ", ".join(sorted(appels)))
           PY
+
+      - name: Les octets commites sont ceux du travail -- aucun CRLF
+        run: |
+          # A casse la CI le 6 novembre : un `.jws` ecrit sous Windows
+          # portait des CRLF, Git le normalisait, et son empreinte changeait
+          # -- celle sur laquelle la preuve d horodatage s engage.
+          python tests/test_no_crlf.py
 
       - name: Aucun materiau de cle privee dans le suivi
         run: |

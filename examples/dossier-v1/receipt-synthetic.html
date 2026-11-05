@@ -1,0 +1,64 @@
+<!--
+  RECU DE VALIDATION ENTIEREMENT SYNTHETIQUE.
+
+  Fabrique pour les tests publics. Il ne provient d aucun pilote, ne
+  concerne aucune vulnerabilite reelle, et ses valeurs sont inventees.
+
+  Sa FORME est modelee sur celle d un recu externe reel : deux executions
+  independantes annoncees, des empreintes de journaux, un resultat dit
+  concordant, un condense de recu, et un score. C est cette forme qu un
+  adaptateur doit savoir lire -- pas ces valeurs-la.
+
+  Il porte deliberement de quoi exercer les cinq statuts :
+    une valeur qui concorde, une qui diverge, une absente de notre cote,
+    une que nous ne pouvons pas recalculer, et un contexte de mesure
+    manquant qui rend la comparaison impossible.
+-->
+<!doctype html>
+<meta charset="utf-8">
+<title>Recu de validation CP-SYNTH — entierement synthetique</title>
+
+<h1>Recu de validation <code>CP-SYNTH</code></h1>
+
+<p><strong>Document entierement synthetique.</strong> Aucune donnee reelle,
+aucun pilote, aucune vulnerabilite. Les valeurs sont inventees pour exercer
+un adaptateur.</p>
+
+<h2>Identification</h2>
+<dl>
+  <dt>reference</dt><dd>CP-SYNTH-0001</dd>
+  <dt>item</dt><dd>fixture-item-a</dd>
+  <dt>modele declare</dt><dd>ci-fixture-v1</dd>
+</dl>
+
+<h2>Executions declarees</h2>
+<p>Deux executions independantes sur des fixtures locales, dont nous
+<em>declarons</em> la concordance. Ni les fixtures ni les journaux ne sont
+joints a ce document.</p>
+
+<table>
+  <tr><th>champ</th><th>valeur</th></tr>
+  <tr><td>executions independantes</td><td>2</td></tr>
+  <tr><td>resultat declare</td><td>concordant</td></tr>
+  <tr><td>latence observee (ms)</td><td>100</td></tr>
+  <tr><td>score de coherence</td><td>0,3863</td></tr>
+  <tr><td>score de stabilite declare</td><td>0,594</td></tr>
+  <tr><td>empreinte de la reponse</td><td>5ebf9582f2aed6ea16c5cef8c67f01b4b6746cd12554f3e36f43b603ab36ee4c</td></tr>
+  <tr><td>empreinte du journal d execution 1</td><td>1111111111111111111111111111111111111111111111111111111111111111</td></tr>
+  <tr><td>empreinte du journal d execution 2</td><td>2222222222222222222222222222222222222222222222222222222222222222</td></tr>
+  <tr><td>condense du recu</td><td>3333333333333333333333333333333333333333333333333333333333333333</td></tr>
+</table>
+
+<h2>Ce que ce recu ne porte pas</h2>
+<ul>
+  <li>Aucune signature. Aucune cle publique. <strong>Ce document n est pas
+      signe cryptographiquement</strong>, et ne doit jamais etre decrit comme
+      tel.</li>
+  <li>Aucune version de mesure, aucune couverture, aucune definition de
+      score. Sans ces trois elements, aucune valeur de ce recu ne se compare
+      a une valeur mesuree ailleurs.</li>
+  <li>Aucun journal, aucune fixture : les empreintes ci-dessus sont
+      <em>declarees</em> et ne peuvent pas etre recalculees.</li>
+</ul>
+
+<p><small>Rapport detaille : non fourni.</small></p>

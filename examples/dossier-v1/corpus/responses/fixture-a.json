@@ -1,0 +1,10 @@
+{
+  "latency_ms": 100,
+  "model_requested": "ci-fixture-v1",
+  "model_served": "ci-fixture-v1",
+  "model_served_attestation": "provider_attested",
+  "provider": "synthetic:ci-fixture",
+  "received_at": "2026-01-01T00:00:00Z",
+  "response_text": "Reponse fabriquee pour la fixture d integration continue. Elle n observe aucun operateur, ne porte aucun raisonnement, et n atteste rien. Son seul role est de donner a la chaine un texte de longueur plausible. Choix : A.",
+  "sent_at": "2026-01-01T00:00:00Z"
+}

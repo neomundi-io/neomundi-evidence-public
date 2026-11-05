@@ -240,9 +240,13 @@ def construire(sortie: Path) -> tuple[Path, Path]:
     manifeste_corpus = {"bundle_id": "ci-fixture", "regime": "synthetic",
                         "origin": "ci-fixture", "entries": entrees_corpus,
                         "frozen_at": INSTANT}
-    (corpus / "manifest.json").write_text(
-        json.dumps(manifeste_corpus, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8")
+    # LF EXPLICITE, et jamais `write_text` : sous Windows il traduit `\n`
+    # en `\r\n`, et la MEME archive fabriquee sur deux systemes n aurait
+    # pas la meme empreinte. Les octets d un corpus font partie de la
+    # chaine : leurs empreintes sont dans `replay_provenance`.
+    (corpus / "manifest.json").write_bytes(
+        (json.dumps(manifeste_corpus, ensure_ascii=False, indent=2, sort_keys=True)
+         + "\n").encode("utf-8"))
     recs = sorted(
         ({"path": "responses/" + e["recording"],
           "sha256": sha256((corpus / "responses" / e["recording"]).read_bytes())}
@@ -356,7 +360,7 @@ def construire(sortie: Path) -> tuple[Path, Path]:
     (liaison / nom_premier).write_bytes((corpus / nom_premier).read_bytes())
 
     # --- un descripteur, pour que la CI n ait rien a deviner ---------------
-    (sortie / "fixture.json").write_text(
+    (sortie / "fixture.json").write_bytes(
         json.dumps(
             {
                 "archive": archive.name,
@@ -374,8 +378,7 @@ def construire(sortie: Path) -> tuple[Path, Path]:
             indent=2,
             sort_keys=True,
         )
-        + "\n",
-        encoding="utf-8",
+        .encode("utf-8") + b"\n"
     )
     return archive, corpus
 

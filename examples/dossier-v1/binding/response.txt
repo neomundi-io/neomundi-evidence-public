@@ -1,0 +1,1 @@
+Reponse fabriquee pour la fixture d integration continue. Elle n observe aucun operateur, ne porte aucun raisonnement, et n atteste rien. Son seul role est de donner a la chaine un texte de longueur plausible. Choix : A.

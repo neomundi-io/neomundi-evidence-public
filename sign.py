@@ -229,8 +229,9 @@ def genkey(arguments: argparse.Namespace) -> int:
             ],
         }
         arguments.trust_store_out.parent.mkdir(parents=True, exist_ok=True)
-        arguments.trust_store_out.write_text(
-            json.dumps(magasin, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        # LF explicite : voir la note sur `write_text` ci-dessus.
+        arguments.trust_store_out.write_bytes(
+            (json.dumps(magasin, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
         )
         print("magasin de confiance ecrit : %s" % arguments.trust_store_out)
         print("  cle publique (x)         : %s" % b64u(brut_public))
@@ -342,7 +343,11 @@ def attest(arguments: argparse.Namespace) -> int:
     jeton = b64u(entete) + "." + b64u(charge) + "." + b64u(privee.sign(signe))
 
     arguments.out.parent.mkdir(parents=True, exist_ok=True)
-    arguments.out.write_text(jeton + "\n", encoding="ascii")
+    # LF EXPLICITE, et jamais `write_text` : sous Windows il traduit `\n` en
+    # `\r\n`, et le MEME dossier signe sur deux systemes n aurait pas la
+    # meme empreinte. Or une preuve d horodatage s engage sur cette
+    # empreinte -- le defaut a ete constate, pas suppose.
+    arguments.out.write_bytes((jeton + "\n").encode("ascii"))
 
     print("attestation ecrite : %s" % arguments.out)
     print("  sujet            : %s" % sujet["bundle_name"])
