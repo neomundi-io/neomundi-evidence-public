@@ -272,7 +272,7 @@ guarantee for a cosmetic one.
 
 ## Test matrix
 
-`python tests/test_attestation.py <archive> [corpus]` → **23/23 conforming.**
+`python tests/test_attestation.py <archive> [corpus]` → **25/25 conforming.**
 All keys are ephemeral, generated at run time and erased at the end.
 
 | # | Case | Observed result |
@@ -286,6 +286,8 @@ All keys are ephemeral, generated at run time and erased at the end.
 | 7 | **archive recomputed after deleting one observation** | `verify.py` alone: **0 internal FAIL**. The attestation: **agreement `FAIL`** |
 | 8 | malformed signature metadata (5 shapes) | **5/5** return a motivated `FAIL`, no traceback |
 | 9 | **unsigned** historical archive | binding accepted at `reference_verifiable`, attestation `NOT TESTED` |
+| 9b | **`bind.py --attestation`**: transitive elevation | binding raised to `cryptographically_attested` |
+| 9c | `bind.py --attestation` untrusted | **no elevation** — the binding falls back |
 | 10 | `verify.py` non-regression on GROUNDED-S1 | `19 PASS, 0 FAIL, 2 NOT TESTED` — unchanged |
 | 11 | forged `alg` (`none`, `HS256`, `RS256`) | **3/3 refused** — the algorithm is imposed, never read to choose |
 | 12 | `test` key without `--allow-test-keys` | signature `PASS`, **trust `FAIL`** |
@@ -300,6 +302,21 @@ All keys are ephemeral, generated at run time and erased at the end.
 | 20 | header `kid` ≠ payload `kid` | **refused** |
 | 21 | retrospective attestation with no freeze date | **refused** |
 | 22 | **non-canonical** but correctly signed payload | profile `FAIL`, signature `PASS` — the two controls are genuinely distinct |
+
+### A defect found in review, and its underlying cause
+
+The `bind.py --attestation` path was **broken** in the initial candidate
+commit: transitive elevation always failed with
+`AttributeError: 'Namespace' object has no attribute 'anchor_proof'`.
+
+The cause was not a forgotten field but the **possibility** of one:
+`bind.py` rebuilt the verifier's argument set by hand, so adding an option
+on one side broke the other silently. The fix is a **single factory**,
+`arguments_de_verification()`: a new field gets its default there, and every
+caller inherits it.
+
+No test covered that path — which is why it slipped through. Cases **9b**
+and **9c** now exercise it. An untested path is a broken path.
 
 ### Case 7 closes a declared limit
 

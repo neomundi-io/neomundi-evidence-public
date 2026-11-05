@@ -697,12 +697,13 @@ def controle_attestation(bilan: Bilan, verdicts: list[dict],
     # Le verificateur d attestation ecrit sur la sortie standard : on le
     # laisse parler, c est son rapport, et le lecteur a besoin de le voir.
     print("\n--- verification de l attestation du sujet ---")
-    sous_arguments = argparse.Namespace(
+    # La fabrique du verificateur, et non un Namespace rebati ici : c est ce
+    # qui a casse une fois, en silence, quand une option a ete ajoutee.
+    sous_arguments = verify_attestation.arguments_de_verification(
         attestation=arguments.attestation,
         archive=arguments.archive,
         trust_store=arguments.trust_store,
         allow_test_keys=arguments.allow_test_keys,
-        json=None,
     )
     sous_bilan, niveau, _ = verify_attestation.verifier(sous_arguments)
     print("--- fin de la verification de l attestation ---\n")

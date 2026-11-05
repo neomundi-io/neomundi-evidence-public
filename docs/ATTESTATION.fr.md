@@ -277,7 +277,7 @@ notre propre cryptographie pour préserver un slogan « zéro dépendance »
 
 ## Matrice de tests
 
-`python tests/test_attestation.py <archive> [corpus]` → **23/23 conformes.**
+`python tests/test_attestation.py <archive> [corpus]` → **25/25 conformes.**
 Toutes les clés sont éphémères, générées à l'exécution et effacées à la fin.
 
 | # | Cas | Résultat observé |
@@ -291,6 +291,8 @@ Toutes les clés sont éphémères, générées à l'exécution et effacées à 
 | 7 | **archive recalculée après suppression d'une observation** | `verify.py` seul : **0 FAIL interne**. L'attestation : **concordance `FAIL`** |
 | 8 | métadonnées de signature malformées (5 formes) | **5/5** rendent un `FAIL` motivé, sans trace d'appels |
 | 9 | archive historique **non signée** | liaison acceptée à `reference_verifiable`, attestation `NOT TESTED` |
+| 9b | **`bind.py --attestation`** : élévation transitive | liaison élevée à `cryptographically_attested` |
+| 9c | `bind.py --attestation` non fiable | **aucune élévation** — la liaison retombe |
 | 10 | non-régression `verify.py` GROUNDED-S1 | `19 PASS, 0 FAIL, 2 NOT TESTED` — inchangé |
 | 11 | `alg` falsifié (`none`, `HS256`, `RS256`) | **3/3 refusés** — l'algorithme est imposé, jamais lu pour choisir |
 | 12 | clé `test` sans `--allow-test-keys` | signature `PASS`, **confiance `FAIL`** |
@@ -305,6 +307,22 @@ Toutes les clés sont éphémères, générées à l'exécution et effacées à 
 | 20 | `kid` d'en-tête ≠ `kid` de la charge | **refusé** |
 | 21 | attestation rétrospective sans date de gel | **refusée** |
 | 22 | charge **non canonique** mais correctement signée | profil `FAIL`, signature `PASS` — les deux contrôles sont bien distincts |
+
+### Un défaut trouvé en revue, et sa cause de fond
+
+Le chemin `bind.py --attestation` était **cassé** dans le commit candidat
+initial : l'élévation transitive échouait toujours par
+`AttributeError: 'Namespace' object has no attribute 'anchor_proof'`.
+
+La cause n'était pas l'oubli d'un champ, mais sa **possibilité** :
+`bind.py` reconstruisait à la main le jeu d'arguments du vérificateur, si
+bien qu'ajouter une option d'un côté cassait l'autre en silence. La
+correction est une **fabrique unique**, `arguments_de_verification()` : un
+nouveau champ y reçoit son défaut, et tous les appelants en héritent.
+
+Aucun test ne couvrait ce chemin — c'est pour cela qu'il est passé. Les cas
+**9b** et **9c** l'éprouvent désormais. Un chemin non testé est un chemin
+cassé.
 
 ### Le cas 7 referme une limite déclarée
 

@@ -86,6 +86,11 @@ def etat(sortie: str, intitule: str) -> str:
     return "absent"
 
 
+def motif_bind(sortie: str) -> str:
+    """Le premier FAIL d une sortie de `bind.py`, pour expliquer un echec."""
+    return next((l.strip() for l in sortie.splitlines() if l.startswith("[FAIL")), "")
+
+
 def niveau(sortie: str) -> str:
     """Le niveau REELLEMENT atteint, ou "aucun".
 
@@ -344,6 +349,38 @@ def cas(banc: Banc) -> list[tuple[str, str, bool, str]]:
          code == 0 and "reference_verifiable" in s
          and etat(s, "attestation de l archive du sujet") == "NOT TESTED",
          "liaison acceptee au niveau reference_verifiable, attestation NOT TESTED")
+
+    # ---- 9b. bind.py --attestation : l ELEVATION TRANSITIVE ---------------
+    # Cas ajoute le 6 novembre, en revue : ce chemin n etait couvert par
+    # AUCUN test, et il etait CASSE -- `bind.py` rebatissait a la main le jeu
+    # d arguments du verificateur, et une option ajoutee ensuite le faisait
+    # echouer par AttributeError. Un chemin non teste est un chemin casse.
+    code, s = lancer([
+        sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
+        "--root", str(exemple), "--archive", str(banc.archive),
+        "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
+        "--allow-test-keys",
+    ])
+    eleves = "cryptographically_attested" in s and "eleve(s) de" in s
+    pose("9b", "bind.py --attestation : elevation transitive des artefacts",
+         code == 0 and eleves
+         and etat(s, "attestation de l archive du sujet") == "PASS"
+         and "Niveau de garantie DERIVE pour la liaison : cryptographically_attested" in s,
+         "liaison elevee a cryptographically_attested"
+         if eleves else "ELEVATION ABSENTE -- %s" % (motif_bind(s) or "sans motif"))
+
+    # ---- 9c. bind.py --attestation avec une attestation NON valide --------
+    # L elevation ne doit pas se produire, et la liaison doit retomber.
+    code, s = lancer([
+        sys.executable, str(BIND), "verify", str(exemple / "manifest.json"),
+        "--root", str(exemple), "--archive", str(banc.archive),
+        "--attestation", str(banc.jws), "--trust-store", str(banc.magasin),
+    ])  # sans --allow-test-keys : l attestation n atteint pas le niveau
+    pose("9c", "bind.py --attestation non fiable : aucune elevation",
+         code != 0 and etat(s, "attestation de l archive du sujet") == "FAIL"
+         and "cryptographically_attested" not in s.split("BILAN")[-1],
+         "elevation refusee -- une attestation qui n atteint pas le niveau "
+         "n eleve rien")
 
     # ---- 10. non-regression ------------------------------------------------
     code_g, s_g = lancer([sys.executable, str(VERIFY), str(banc.archive),

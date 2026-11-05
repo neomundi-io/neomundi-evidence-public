@@ -592,6 +592,32 @@ def controle_verite(bilan: Bilan) -> None:
 # --------------------------------------------------------------------------
 
 
+def arguments_de_verification(
+    attestation: Path,
+    archive: Path | None = None,
+    trust_store: Path | None = None,
+    allow_test_keys: bool = False,
+    anchor_proof: Path | None = None,
+    json: Path | None = None,
+) -> argparse.Namespace:
+    """Le jeu d arguments complet de `verifier`, pour un appelant interne.
+
+    Existe parce que `bind.py` reconstruisait ce jeu a la main : ajouter
+    `--anchor-proof` ici cassait l autre en silence, par un AttributeError
+    que seule la revue a vu. Une fabrique unique rend impossible qu un
+    appelant oublie un champ -- un nouveau champ recoit son defaut ici, et
+    tous les appelants en heritent.
+    """
+    return argparse.Namespace(
+        attestation=attestation,
+        archive=archive,
+        trust_store=trust_store,
+        allow_test_keys=allow_test_keys,
+        anchor_proof=anchor_proof,
+        json=json,
+    )
+
+
 def verifier(arguments: argparse.Namespace) -> tuple[Bilan, str | None, dict]:
     bilan = Bilan()
     contexte: dict[str, object] = {}
