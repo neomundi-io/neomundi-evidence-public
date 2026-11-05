@@ -112,13 +112,31 @@ class Bilan:
 
     def __init__(self) -> None:
         self.lignes: list[tuple[str, str, str]] = []
+        #: Index des lignes dont le NOT TESTED est CONTINGENT, donc
+        #: exigibles en mode strict. Jamais les limites permanentes. On
+        #: retient l index et non l intitule : plusieurs intitules sont
+        #: construits, donc un ensemble de noms serait fragile.
+        self.requis: list[int] = []
 
-    def dire(self, etat: str, intitule: str, detail: str = "") -> None:
+    def dire(self, etat: str, intitule: str, detail: str = "",
+             requis: bool = False) -> None:
+        """Inscrit une ligne. `requis` ne change NI l etat NI l affichage.
+
+        Il ne sert qu au code de sortie en mode strict : marquer une ligne
+        requise dit que son `NOT TESTED` serait evitable si l appelant
+        fournissait ce qui manque.
+        """
+        if requis:
+            self.requis.append(len(self.lignes))
         self.lignes.append((etat, intitule, detail))
         print("[%-10s] %s%s" % (etat, intitule, " - " + detail if detail else ""))
 
     def compte(self, etat: str) -> int:
         return sum(1 for l in self.lignes if l[0] == etat)
+
+    def requises_non_demontrees(self) -> list[str]:
+        """Les garanties requises qui ne sont pas `PASS`, dans l ordre vu."""
+        return [self.lignes[i][1] for i in self.requis if self.lignes[i][0] != PASS]
 
     def a_echoue(self, intitule: str) -> bool:
         return any(e == FAIL and i == intitule for e, i, _ in self.lignes)
@@ -126,8 +144,18 @@ class Bilan:
     def est_passe(self, intitule: str) -> bool:
         return any(e == PASS and i == intitule for e, i, _ in self.lignes)
 
-    def code_de_sortie(self) -> int:
-        return 1 if self.compte(FAIL) else 0
+    def code_de_sortie(self, strict: bool = False) -> int:
+        """0 sain, 1 au moins un FAIL, 2 garantie requise non demontree.
+
+        Un `FAIL` l emporte sur un manque en strict : c est l enonce le plus
+        fort, et un consommateur qui ne distingue pas les codes non nuls
+        n est pas induit en erreur pour autant.
+        """
+        if self.compte(FAIL):
+            return 1
+        if strict and self.requises_non_demontrees():
+            return 2
+        return 0
 
 
 # --------------------------------------------------------------------------
@@ -154,6 +182,23 @@ INTITULE_CONFIANCE = "identite de confiance"
 INTITULE_CONCORDANCE = "concordance avec l archive"
 INTITULE_PROFIL = "profil de canonicalisation"
 INTITULE_ENTETE = "en-tete : algorithme impose"
+
+
+#: Les cinq piliers : le niveau n est derive que s ils sont tous `PASS`,
+#: et ce sont eux que le mode strict exige.
+PILIERS = (INTITULE_PROFIL, INTITULE_ENTETE, INTITULE_SIGNATURE,
+           INTITULE_CONFIANCE, INTITULE_CONCORDANCE)
+
+
+def dire_pilier(bilan: "Bilan", etat: str, intitule: str, detail: str = "") -> None:
+    """`bilan.dire` pour un pilier : identique, mais marque la ligne requise.
+
+    Existe pour que marquer un pilier ne demande pas de retoucher chacun de
+    ses appels -- et pour qu un pilier oublie se voie, puisque `PILIERS` est
+    la seule liste a tenir a jour.
+    """
+    assert intitule in PILIERS, "pilier inconnu : %s" % intitule
+    bilan.dire(etat, intitule, detail, requis=True)
 
 
 def controle_forme(bilan: Bilan, attestation: dict) -> bool:
@@ -232,7 +277,7 @@ def controle_profil(bilan: Bilan, octets_charge: bytes) -> None:
     """
     conforme, explication = canonical.est_conforme(octets_charge)
     bilan.dire(PASS if conforme else FAIL, INTITULE_PROFIL,
-               "%s -- %s" % (canonical.PROFIL, explication))
+               "%s -- %s" % (canonical.PROFIL, explication), requis=True)
 
 
 def controle_entete(bilan: Bilan, entete: dict, key_id: str) -> None:
@@ -249,9 +294,10 @@ def controle_entete(bilan: Bilan, entete: dict, key_id: str) -> None:
         problemes.append("kid de l en-tete (%r) different de key_id de la charge (%r)"
                          % (entete.get("kid"), key_id))
     if problemes:
-        bilan.dire(FAIL, INTITULE_ENTETE, "; ".join(problemes))
+        bilan.dire(FAIL, INTITULE_ENTETE, "; ".join(problemes), requis=True)
     else:
-        bilan.dire(PASS, INTITULE_ENTETE, "%s, kid %s" % (ALG_IMPOSE, key_id))
+        bilan.dire(PASS, INTITULE_ENTETE, "%s, kid %s" % (ALG_IMPOSE, key_id),
+                   requis=True)
 
 
 def charge_magasin(chemin: Path) -> dict:
@@ -289,33 +335,33 @@ def charge_magasin(chemin: Path) -> dict:
 
 def controle_signature(bilan: Bilan, entree_cle: dict, signe: bytes, signature: bytes) -> None:
     if not CRYPTO:
-        bilan.dire(NOT_TESTED, INTITULE_SIGNATURE,
+        dire_pilier(bilan, NOT_TESTED, INTITULE_SIGNATURE,
                    "`cryptography` est absent de cet environnement : Ed25519 n est pas "
                    "verifiable avec la bibliotheque standard. `pip install cryptography` "
                    "pour l eprouver. Aucun PASS n est accorde sans verification.")
         return
     if entree_cle.get("crv") != "Ed25519" or entree_cle.get("alg") != ALG_IMPOSE:
-        bilan.dire(FAIL, INTITULE_SIGNATURE,
+        dire_pilier(bilan, FAIL, INTITULE_SIGNATURE,
                    "la cle declare crv=%r alg=%r ; attendu Ed25519/EdDSA"
                    % (entree_cle.get("crv"), entree_cle.get("alg")))
         return
     try:
         brut = deb64u(str(entree_cle.get("x", "")))
     except Illisible as erreur:
-        bilan.dire(FAIL, INTITULE_SIGNATURE, "cle publique illisible : %s" % erreur)
+        dire_pilier(bilan, FAIL, INTITULE_SIGNATURE, "cle publique illisible : %s" % erreur)
         return
     if len(brut) != 32:
-        bilan.dire(FAIL, INTITULE_SIGNATURE,
+        dire_pilier(bilan, FAIL, INTITULE_SIGNATURE,
                    "une cle publique Ed25519 fait 32 octets ; recu %d" % len(brut))
         return
     try:
         ed25519.Ed25519PublicKey.from_public_bytes(brut).verify(signature, signe)
     except Exception as erreur:  # noqa: BLE001 - toute cause rend le meme verdict
-        bilan.dire(FAIL, INTITULE_SIGNATURE,
+        dire_pilier(bilan, FAIL, INTITULE_SIGNATURE,
                    "la cle %s n a pas signe ces octets (%s)"
                    % (entree_cle.get("kid"), type(erreur).__name__))
         return
-    bilan.dire(PASS, INTITULE_SIGNATURE,
+    dire_pilier(bilan, PASS, INTITULE_SIGNATURE,
                "EdDSA/Ed25519, cle %s, %d octets signes"
                % (entree_cle.get("kid"), len(signe)))
 
@@ -333,7 +379,7 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
     kid = entree_cle.get("kid")
 
     if statut == "test" and not autoriser_test:
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "cle %s de statut `test` : elle n accorde aucune attestation. "
                    "Relancer avec --allow-test-keys pour l accepter explicitement." % kid)
         return
@@ -343,7 +389,7 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
         # la cle privee peut forger n importe quel `attested_at_declared`,
         # donc faire survivre les signatures anterieures reviendrait a faire
         # confiance a un horodatage que l attaquant controle.
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "cle %s COMPROMISE le %s (%s) : toutes ses signatures sont non "
                    "fiables, quelle que soit leur date declaree."
                    % (kid, revocation.get("at_declared", "?"),
@@ -353,20 +399,20 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
     if revocation.get("kind") == "rotated":
         limite = revocation.get("at_declared", "")
         if emis and limite and emis > limite:
-            bilan.dire(FAIL, INTITULE_CONFIANCE,
+            dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                        "cle %s retiree par rotation le %s, attestation declaree le %s : "
                        "posterieure a la rotation." % (kid, limite, emis))
             return
 
     fin = entree_cle.get("valid_until_declared")
     if isinstance(fin, str) and emis and emis > fin:
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "cle %s expiree le %s, attestation declaree le %s" % (kid, fin, emis))
         return
 
     debut = entree_cle.get("valid_from_declared")
     if isinstance(debut, str) and emis and emis < debut:
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "attestation declaree le %s, anterieure a la validite de la cle %s (%s)"
                    % (emis, kid, debut))
         return
@@ -376,12 +422,12 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
     signataire_cle = entree_cle.get("signer_identity")
     signataire_att = (attestation.get("identities") or {}).get("signer")
     if signataire_cle != signataire_att:
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "l attestation se dit signee par %r, le magasin rattache la cle %s a %r"
                    % (signataire_att, kid, signataire_cle))
         return
     if signataire_att not in identites:
-        bilan.dire(FAIL, INTITULE_CONFIANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONFIANCE,
                    "signataire %r inconnu du registre d identites du magasin" % signataire_att)
         return
 
@@ -394,7 +440,7 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
         # attestations anterieures intactes.
         detail += " ; identite remplacee depuis par %s, sans effet sur cette attestation" \
             % identite["superseded_by"]
-    bilan.dire(PASS, INTITULE_CONFIANCE, detail)
+    dire_pilier(bilan, PASS, INTITULE_CONFIANCE, detail)
 
 
 def controle_capacite_juridique(bilan: Bilan, magasin: dict, attestation: dict) -> None:
@@ -443,17 +489,17 @@ def controle_identites(bilan: Bilan, magasin: dict, attestation: dict) -> None:
 def controle_concordance(bilan: Bilan, attestation: dict, archive: Path | None) -> None:
     sujet = attestation["subject"]
     if archive is None:
-        bilan.dire(NOT_TESTED, INTITULE_CONCORDANCE,
+        dire_pilier(bilan, NOT_TESTED, INTITULE_CONCORDANCE,
                    "archive non fournie. La fournir avec --archive pour confronter "
                    "l empreinte attestee a l archive reelle.")
         return
     if not archive.is_file():
-        bilan.dire(FAIL, INTITULE_CONCORDANCE, "archive introuvable : %s" % archive)
+        dire_pilier(bilan, FAIL, INTITULE_CONCORDANCE, "archive introuvable : %s" % archive)
         return
 
     observee = sha256_fichier(archive)
     if observee != sujet["bundle_sha256"]:
-        bilan.dire(FAIL, INTITULE_CONCORDANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONCORDANCE,
                    "l attestation porte sur %s..., l archive fournie se hache sur %s..."
                    % (sujet["bundle_sha256"][:16], observee[:16]))
         return
@@ -477,18 +523,18 @@ def controle_concordance(bilan: Bilan, attestation: dict, archive: Path | None) 
                     if reel != sujet["checksums_sha256"]:
                         ecarts.append("checksums_sha256 divergent")
     except (zipfile.BadZipFile, OSError) as erreur:
-        bilan.dire(FAIL, INTITULE_CONCORDANCE, "archive illisible : %s" % erreur)
+        dire_pilier(bilan, FAIL, INTITULE_CONCORDANCE, "archive illisible : %s" % erreur)
         return
 
     if ecarts:
         # Impossible en pratique si `bundle_sha256` concorde ; si cela arrive,
         # c est l attestation qui est incoherente, pas l archive.
-        bilan.dire(FAIL, INTITULE_CONCORDANCE,
+        dire_pilier(bilan, FAIL, INTITULE_CONCORDANCE,
                    "empreinte du fichier conforme mais %s : attestation incoherente"
                    % "; ".join(ecarts))
         return
 
-    bilan.dire(PASS, INTITULE_CONCORDANCE,
+    dire_pilier(bilan, PASS, INTITULE_CONCORDANCE,
                "bundle_sha256 recalcule sur %d octets, et les empreintes de membres "
                "concordent" % archive.stat().st_size)
 
@@ -599,6 +645,7 @@ def arguments_de_verification(
     allow_test_keys: bool = False,
     anchor_proof: Path | None = None,
     json: Path | None = None,
+    strict: bool = False,
 ) -> argparse.Namespace:
     """Le jeu d arguments complet de `verifier`, pour un appelant interne.
 
@@ -615,6 +662,7 @@ def arguments_de_verification(
         allow_test_keys=allow_test_keys,
         anchor_proof=anchor_proof,
         json=json,
+        strict=strict,
     )
 
 
@@ -647,10 +695,10 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, str | None, dict]:
     controle_entete(bilan, entete, attestation["key_id"])
 
     if arguments.trust_store is None:
-        bilan.dire(NOT_TESTED, INTITULE_SIGNATURE,
+        dire_pilier(bilan, NOT_TESTED, INTITULE_SIGNATURE,
                    "aucun magasin de confiance fourni : la cle %s n est pas resoluble. "
                    "La fournir avec --trust-store <fichier>." % attestation["key_id"])
-        bilan.dire(NOT_TESTED, INTITULE_CONFIANCE, "sans magasin, aucune confiance n est etablie")
+        dire_pilier(bilan, NOT_TESTED, INTITULE_CONFIANCE, "sans magasin, aucune confiance n est etablie")
     else:
         try:
             magasin = charge_magasin(arguments.trust_store)
@@ -668,11 +716,11 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, str | None, dict]:
             if entree is None:
                 # INCONNUE n est pas FAUSSE : la signature peut etre
                 # parfaitement valide, nous ne pouvons pas le savoir.
-                bilan.dire(NOT_TESTED, INTITULE_SIGNATURE,
+                dire_pilier(bilan, NOT_TESTED, INTITULE_SIGNATURE,
                            "cle %s inconnue de ce magasin (%d cle(s) connue(s)). La "
                            "signature est peut-etre valide ; rien ici ne permet de le dire."
                            % (attestation["key_id"], len(entrees)))
-                bilan.dire(NOT_TESTED, INTITULE_CONFIANCE,
+                dire_pilier(bilan, NOT_TESTED, INTITULE_CONFIANCE,
                            "cle inconnue : aucune confiance n est etablie, et aucune n est niee")
             else:
                 signe = (e + "." + c).encode("ascii")
@@ -723,6 +771,20 @@ def rendre(bilan: Bilan, niveau: str | None, contexte: dict,
         print("Niveau atteint : AUCUN au-dela de l integrite.")
         print("Des piliers n ont pas pu etre eprouves -- voir les lignes NOT TESTED.")
 
+    manquantes = bilan.requises_non_demontrees()
+    if arguments.strict:
+        if manquantes:
+            print(
+                "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
+                % len(manquantes)
+            )
+            for m in manquantes:
+                print("  - %s" % m)
+            print("Aucun verdict n a change : ces lignes restent telles qu affichees.")
+            print("Seul le code de sortie en tient compte (2).")
+        else:
+            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+
     if arguments.json:
         attestation = contexte.get("attestation") or {}
         rapport = {
@@ -733,6 +795,9 @@ def rendre(bilan: Bilan, niveau: str | None, contexte: dict,
             "controls": [{"state": e, "control": i, "detail": d} for e, i, d in bilan.lignes],
             "counts": {"pass": bilan.compte(PASS), "fail": bilan.compte(FAIL),
                        "not_tested": bilan.compte(NOT_TESTED)},
+            "strict": bool(arguments.strict),
+            "required_not_demonstrated": manquantes,
+            "exit_code": bilan.code_de_sortie(arguments.strict),
             "attained_level": niveau,
             "subject": attestation.get("subject"),
             "identities": attestation.get("identities"),
@@ -755,7 +820,7 @@ def rendre(bilan: Bilan, niveau: str | None, contexte: dict,
         )
         print("\nrapport lisible par machine : %s" % arguments.json)
 
-    return bilan.code_de_sortie()
+    return bilan.code_de_sortie(arguments.strict)
 
 
 def main() -> int:
@@ -775,6 +840,12 @@ def main() -> int:
                            help="accepter explicitement une cle de statut `test`")
     analyseur.add_argument("--json", type=Path, default=None, metavar="FICHIER",
                            help="ecrire aussi un rapport lisible par machine")
+    analyseur.add_argument(
+        "--strict", action="store_true",
+        help="sortir en code 2 si une garantie REQUISE n est pas demontree. Ne "
+             "change AUCUN verdict : les lignes restent PASS, FAIL ou NOT TESTED "
+             "a l identique. Pour les consommateurs automatises.",
+    )
     arguments = analyseur.parse_args()
 
     bilan, niveau, contexte = verifier(arguments)

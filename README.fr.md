@@ -18,6 +18,7 @@
 exportable, lisible, et contrôlable par son destinataire sans nous.**
 
 [![Evidence : V0.1](https://img.shields.io/badge/Evidence-V0.1-475569?style=flat-square)](#ce-que-contient-un-dossier-de-preuve)
+[![tests](https://github.com/neomundi-io/neomundi-evidence-public/actions/workflows/tests.yml/badge.svg)](https://github.com/neomundi-io/neomundi-evidence-public/actions/workflows/tests.yml)
 [![Vérification indépendante](https://img.shields.io/badge/V%C3%A9rification_ind%C3%A9pendante-sans_d%C3%A9pendance-0f766e?style=flat-square)](#vérifier-un-dossier-de-preuve)
 [![Intégrité : SHA-256](https://img.shields.io/badge/Int%C3%A9grit%C3%A9-SHA--256-0f766e?style=flat-square)](docs/EXTERNAL_REFERENCE.fr.md)
 [![Falsification : 10/10 testées](https://img.shields.io/badge/Falsification-10%2F10_test%C3%A9es-0f766e?style=flat-square)](#tests-de-falsification)
@@ -276,6 +277,7 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/CORPUS_REFERENCE.fr.md`](docs/CORPUS_REFERENCE.fr.md) | les corpus, leurs empreintes, et comment un auditeur les vérifie |
 | [`docs/EXTERNAL_REFERENCE.fr.md`](docs/EXTERNAL_REFERENCE.fr.md) | vérifier depuis une empreinte conservée indépendamment — et pourquoi une empreinte interne n'atteste rien |
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
+| [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
 | [`docs/ATTESTATION.fr.md`](docs/ATTESTATION.fr.md) | l'attestation signée : comment `cryptographically_attested` est atteint, et la matrice de 23 cas |
 | [`docs/CP8_ADAPTER_SPEC.fr.md`](docs/CP8_ADAPTER_SPEC.fr.md) | adaptateur de reçu externe — spécification seule, aucun code |
 | [`docs/BINDING.fr.md`](docs/BINDING.fr.md) | lier une observation à ses preuves, les quatre niveaux de garantie, et la terminologie |

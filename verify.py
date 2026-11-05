@@ -91,16 +91,44 @@ class Bilan:
 
     def __init__(self) -> None:
         self.lignes: list[tuple[str, str, str]] = []
+        #: Index des lignes dont le NOT TESTED est CONTINGENT -- celles qui
+        #: deviendraient PASS si l appelant fournissait ce qui manque. On
+        #: retient l index et non l intitule : plusieurs intitules sont
+        #: construits, donc un ensemble de noms serait fragile.
+        self.requis: list[int] = []
 
-    def dire(self, etat: str, controle: str, detail: str = "") -> None:
+    def dire(self, etat: str, controle: str, detail: str = "",
+             requis: bool = False) -> None:
+        """Inscrit une ligne. `requis` ne change NI l etat NI l affichage.
+
+        Il ne sert qu au code de sortie en mode strict : marquer une ligne
+        requise dit que son `NOT TESTED` serait evitable si l appelant
+        fournissait ce qui manque.
+        """
+        if requis:
+            self.requis.append(len(self.lignes))
         self.lignes.append((etat, controle, detail))
         print("[%-10s] %s%s" % (etat, controle, " - " + detail if detail else ""))
+
+    def requises_non_demontrees(self) -> list[str]:
+        """Les garanties requises qui ne sont pas `PASS`."""
+        return [self.lignes[i][1] for i in self.requis if self.lignes[i][0] != PASS]
 
     def compte(self, etat: str) -> int:
         return sum(1 for ligne in self.lignes if ligne[0] == etat)
 
-    def code_de_sortie(self) -> int:
-        return 1 if self.compte(FAIL) else 0
+    def code_de_sortie(self, strict: bool = False) -> int:
+        """0 sain, 1 au moins un FAIL, 2 garantie requise non demontree.
+
+        Un `FAIL` l emporte : c est l enonce le plus fort, et un
+        consommateur qui ne distingue pas les codes non nuls n est pas
+        induit en erreur pour autant.
+        """
+        if self.compte(FAIL):
+            return 1
+        if strict and self.requises_non_demontrees():
+            return 2
+        return 0
 
 
 def sha256(octets: bytes) -> str:
@@ -514,11 +542,17 @@ def controle_entrees(
         )
         return
     if corpus is None:
+        # La SEULE ligne contingente de cet outil : l appelant peut la faire
+        # passer en fournissant `--corpus`. Les autres NOT TESTED d ici sont
+        # des limites PERMANENTES -- chainage du registre, origine de
+        # l archive, membre absent -- et les exiger rendrait le mode strict
+        # toujours rouge, donc inutile.
         bilan.dire(
             NOT_TESTED,
             "empreintes des entrees rejouees (%d a verifier)" % len(provenances),
             "le corpus d entree n est pas dans l archive. Le fournir avec --corpus "
             "<repertoire> pour que ce controle soit fait.",
+            requis=True,
         )
         return
     bons = divergents = absents = 0
@@ -737,6 +771,13 @@ def main() -> int:
         help="ecrire aussi un rapport lisible par machine. La sortie texte reste "
         "identique : ce fichier s ajoute, il ne remplace rien.",
     )
+    analyseur.add_argument(
+        "--strict",
+        action="store_true",
+        help="sortir en code 2 si une garantie REQUISE n est pas demontree. Ici une "
+        "seule l est : les empreintes des entrees rejouees, qui exigent --corpus. "
+        "Ne change AUCUN verdict.",
+    )
     arguments = analyseur.parse_args()
 
     bilan = Bilan()
@@ -752,6 +793,19 @@ def main() -> int:
     )
     if bilan.compte(FAIL):
         print("Ce dossier ne doit pas etre presente comme verifie.")
+
+    manquantes = bilan.requises_non_demontrees()
+    if arguments.strict:
+        if manquantes:
+            print(
+                "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
+                % len(manquantes)
+            )
+            for m in manquantes:
+                print("  - %s" % m)
+            print("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
+        else:
+            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
 
     if arguments.json:
         # Les trois etats restent trois champs distincts : un consommateur qui
@@ -773,6 +827,9 @@ def main() -> int:
                 "not_tested": bilan.compte(NOT_TESTED),
             },
             "verdict": "fail" if bilan.compte(FAIL) else "no_failure",
+            "strict": bool(arguments.strict),
+            "required_not_demonstrated": manquantes,
+            "exit_code": bilan.code_de_sortie(arguments.strict),
             "does_not_establish": [
                 "authenticity: no signature is verified by this tool",
                 "origin: no trusted clock, no external anchor",
@@ -784,7 +841,7 @@ def main() -> int:
         )
         print("rapport lisible par machine : %s" % arguments.json)
 
-    return bilan.code_de_sortie()
+    return bilan.code_de_sortie(arguments.strict)
 
 
 if __name__ == "__main__":
