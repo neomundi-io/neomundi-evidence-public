@@ -152,10 +152,19 @@ def charge_table(chemin: Path) -> dict:
                 "mappings[%d].kind %r inconnu ; attendu l un de %s"
                 % (index, nature, ", ".join(NATURES))
             )
-        etiquette = e.get("receipt_label")
-        if etiquette in vues:
-            problemes.append("receipt_label %r en double" % etiquette)
-        vues.add(etiquette)
+        chemin = e.get("receipt_source_path")
+        if chemin is not None and not isinstance(chemin, str):
+            problemes.append("mappings[%d].receipt_source_path doit etre textuel"
+                             % index)
+        # La cle d unicite est le COUPLE : deux correspondances peuvent
+        # porter la meme etiquette si elles visent deux chemins distincts.
+        cle = (e.get("receipt_label"), chemin)
+        if cle in vues:
+            problemes.append(
+                "correspondance en double : etiquette %r, chemin %r"
+                % (e.get("receipt_label"), chemin)
+            )
+        vues.add(cle)
     if problemes:
         raise Illisible("; ".join(problemes[:5]))
     return table
@@ -236,7 +245,15 @@ def compare_un_champ(entree: dict, recu: dict, nous: dict,
     """Le statut d un champ, et tout ce qui a servi a le decider."""
     etiquette = entree["receipt_label"]
     champ = entree["neomundi_field"]
-    trouves = [c for c in recu["fields"] if c["label"] == etiquette]
+    chemin_vise = entree.get("receipt_source_path")
+
+    # Un `receipt_source_path` est une VRAIE cle : l importateur le releve
+    # par champ. Une etiquette ne l est pas -- constate sur le dossier CP8
+    # reel, ou << Verifier A >> designe deux lignes de tableau.
+    if chemin_vise:
+        trouves = [c for c in recu["fields"] if c["source_path"] == chemin_vise]
+    else:
+        trouves = [c for c in recu["fields"] if c["label"] == etiquette]
     cote_recu = trouves[0] if trouves else None
     presente_chez_nous = champ in nous
 
@@ -245,11 +262,27 @@ def compare_un_champ(entree: dict, recu: dict, nous: dict,
         "neomundi_field": champ,
         "basis": entree["basis"],
         "receipt_value": cote_recu["value"] if cote_recu else None,
-        "receipt_source_path": cote_recu["source_path"] if cote_recu else None,
+        "receipt_source_path": cote_recu["source_path"] if cote_recu else chemin_vise,
         "neomundi_value": nous.get(champ),
         "status": None,
         "note": "",
     }
+
+    # AMBIGUITE : plusieurs champs portent cette etiquette, et aucun chemin
+    # n a ete vise. Choisir le premier serait deviner -- et produire un
+    # rapport faux sans le dire.
+    if len(trouves) > 1:
+        resultat["status"] = NOT_COMPARABLE
+        resultat["receipt_value"] = None
+        resultat["receipt_source_path"] = None
+        resultat["note"] = (
+            "ETIQUETTE AMBIGUE : %d champs du recu portent %r (%s). Viser un "
+            "`receipt_source_path` dans la table pour lever l ambiguite. Choisir "
+            "le premier serait deviner."
+            % (len(trouves), etiquette,
+               ", ".join(c["source_path"] for c in trouves[:4]))
+        )
+        return resultat
 
     if cote_recu is None and not presente_chez_nous:
         resultat["status"] = MISSING

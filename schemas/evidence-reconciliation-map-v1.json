@@ -52,7 +52,8 @@
         "properties": {
           "receipt_label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "The label as the receipt writes it. NOT a key on its own: pair it with `receipt_source_path` when the receipt repeats a label."
           },
           "neomundi_field": {
             "type": "string",
@@ -83,6 +84,10 @@
           },
           "not_comparable_reason": {
             "type": "string"
+          },
+          "receipt_source_path": {
+            "type": "string",
+            "description": "The source path the importer recorded for this field. A TRUE key, unlike the label: a real receipt may carry the same label on several rows -- observed on the CP8 package, where \"Verifier A\" names both the vulnerable and the patched fixture. When a label matches several fields and no path is given, the field is refused as AMBIGUOUS rather than silently resolved to the first match."
           }
         }
       }

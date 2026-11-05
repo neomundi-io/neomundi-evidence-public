@@ -270,6 +270,76 @@ def main() -> int:
              "REFUSEE" in s19 and "une demande n est pas" in s19,
              "la demande est refusee explicitement")
 
+        # ---- 19b/19c. ETIQUETTE AMBIGUE -- trouve sur le dossier REEL --
+        # Le recu CP8 porte SIX etiquettes dupliquees : << Verifier A >>
+        # designe la fixture vulnerable ET la patchee. L outil prenait la
+        # premiere, silencieusement. Introuvable sans un recu reel.
+        ambigu = travail / "ambigu.html"
+        empreinte_liante = next(
+            f["value"] for f in normalise["fields"]
+            if f["label"] == "empreinte de la reponse")
+        ambigu.write_bytes((
+            "<table>"
+            "<tr><td>item</td><td>fixture-item-a</td></tr>"
+            "<tr><td>empreinte de la reponse</td><td>%s</td></tr>"
+            "<tr><td>Verifier</td><td>ligne vulnerable</td></tr>"
+            "<tr><td>Verifier</td><td>ligne patchee</td></tr>"
+            "</table>" % empreinte_liante).encode("utf-8"))
+        code, _ = lancer(IMPORTEUR, [str(ambigu), "--received-at", QUAND,
+                                     "--out", str(travail / "ambigu.json")])
+        table = {
+            "schema": "neomundi.evidence.reconciliation-map/1",
+            "receipt_context": {"measurement_version": "3.3.1",
+                                "measurement_coverage": 1.0,
+                                "score_definition": "x", "our_score_definition": "x"},
+            "mappings": [{
+                "receipt_label": "Verifier", "neomundi_field": "provider",
+                "basis": "vise une etiquette que le recu porte DEUX fois",
+                "kind": "statement",
+            }],
+        }
+        chemin_t = travail / "map-ambigue.json"
+        chemin_t.write_text(json.dumps(table), encoding="utf-8")
+        code, s19b = lancer(RECONCILIATEUR, [
+            str(travail / "ambigu.json"), "--archive", str(archive),
+            "--map", str(chemin_t)])
+        pose("19b", "etiquette ambigue : refusee, jamais resolue au premier",
+             "AMBIGUE" in s19b and "LIAISON  : EMPREINTE" in s19b,
+             "NOT COMPARABLE avec la cause nommee")
+
+        # La meme, levee par un `receipt_source_path`.
+        table["mappings"][0]["receipt_source_path"] = "table/tr[3]/td[1]"
+        chemin_t2 = travail / "map-levee.json"
+        chemin_t2.write_text(json.dumps(table), encoding="utf-8")
+        code, s19c = lancer(RECONCILIATEUR, [
+            str(travail / "ambigu.json"), "--archive", str(archive),
+            "--map", str(chemin_t2)])
+        pose("19c", "ambiguite levee par `receipt_source_path`",
+             "AMBIGUE" not in s19c and "LIAISON  : EMPREINTE" in s19c,
+             "le chemin est une vraie cle, l etiquette non")
+
+        # Deux correspondances, meme etiquette, chemins distincts : ACCEPTE.
+        table_deux = {
+            "schema": "neomundi.evidence.reconciliation-map/1",
+            "receipt_context": {},
+            "mappings": [
+                {"receipt_label": "Verifier", "neomundi_field": "provider",
+                 "basis": "ligne 3", "kind": "statement",
+                 "receipt_source_path": "table/tr[3]/td[1]"},
+                {"receipt_label": "Verifier", "neomundi_field": "model_requested",
+                 "basis": "ligne 4", "kind": "statement",
+                 "receipt_source_path": "table/tr[4]/td[1]"},
+            ],
+        }
+        chemin_t3 = travail / "map-deux.json"
+        chemin_t3.write_text(json.dumps(table_deux), encoding="utf-8")
+        code, s19d = lancer(RECONCILIATEUR, [
+            str(travail / "ambigu.json"), "--archive", str(archive),
+            "--map", str(chemin_t3)])
+        pose("19d", "meme etiquette, deux chemins : les deux sont acceptees",
+             code == 0 and "en double" not in s19d and "AMBIGUE" not in s19d,
+             "la cle d unicite est le COUPLE etiquette+chemin")
+
         # ---- strict : code 2, et AUCUN statut change ------------------
         code_a, sa = lancer(RECONCILIATEUR, [
             str(recu), "--archive", str(archive),
