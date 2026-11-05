@@ -276,6 +276,8 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/CORPUS_REFERENCE.fr.md`](docs/CORPUS_REFERENCE.fr.md) | les corpus, leurs empreintes, et comment un auditeur les vérifie |
 | [`docs/EXTERNAL_REFERENCE.fr.md`](docs/EXTERNAL_REFERENCE.fr.md) | vérifier depuis une empreinte conservée indépendamment — et pourquoi une empreinte interne n'atteste rien |
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
+| [`docs/ATTESTATION.fr.md`](docs/ATTESTATION.fr.md) | l'attestation signée : comment `cryptographically_attested` est atteint, et la matrice de 23 cas |
+| [`docs/CP8_ADAPTER_SPEC.fr.md`](docs/CP8_ADAPTER_SPEC.fr.md) | adaptateur de reçu externe — spécification seule, aucun code |
 | [`docs/BINDING.fr.md`](docs/BINDING.fr.md) | lier une observation à ses preuves, les quatre niveaux de garantie, et la terminologie |
 | [`docs/REPLAY_FEASIBILITY.fr.md`](docs/REPLAY_FEASIBILITY.fr.md) | peut-on rejouer une mesure ? GO / NO-GO, et les blocages |
 | [`docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md`](docs/AUDIT_CONTRADICTOIRE_EVIDENCE_2026-11-05.md) | l'audit contradictoire du 5 novembre : 18 capacités, ce que chacune fait réellement |
