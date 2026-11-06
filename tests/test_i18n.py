@@ -474,6 +474,37 @@ def main() -> int:
                         continue
                     residus_outils.append("%s : %s" % (titre, nu[:52]))
 
+        # ---- 21b. LE CONTROLE QUI MANQUAIT -----------------------------
+        #
+        # `residu` demande << traduisible ? >>, pas << traduite ? >>. Le
+        # 6 novembre `receipt_import.py` ne traduisait RIEN -- son
+        # `import i18n` echouait, parce que lance depuis `adapters/` la
+        # racine n est pas sur `sys.path` -- et le cas 21 le declarait
+        # conforme, puisque ses chaines etaient bien au catalogue.
+        #
+        # Celui-ci est une CONTRADICTION, pas une heuristique : le
+        # catalogue promet que la chaine change, et elle n a pas change.
+        non_traduits: list[str] = []
+        for titre, outil, args in scenarios:
+            _, sf = lancer_outil(outil, [str(a) for a in args] + ["--lang", "fr"])
+            _, se = lancer_outil(outil, [str(a) for a in args] + ["--lang", "en"])
+            for a, b in zip(sf.splitlines(), se.splitlines()):
+                a, b = a.rstrip(), b.rstrip()
+                if a != b:
+                    continue
+                nettoye = _PREFIXE_ETAT.sub("", a.strip(), count=1)
+                for bout in nettoye.split(" - "):
+                    nu = bout.strip()
+                    if i18n.devrait_changer(nu, i18n.EN):
+                        non_traduits.append("%s : %s" % (titre, nu[:50]))
+
+        pose("21b", "aucune chaine que le catalogue promet de traduire ne sort en francais",
+             not non_traduits,
+             "le catalogue et la sortie concordent"
+             if not non_traduits
+             else "%d chaine(s) NON TRADUITE(S) : %s"
+                  % (len(non_traduits), non_traduits[:2]))
+
         pose("21", "les SIX outils : aucun residu francais en anglais",
              not residus_outils,
              "%d scenarios balayes" % len(scenarios) if not residus_outils

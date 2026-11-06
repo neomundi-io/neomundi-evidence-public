@@ -45,6 +45,18 @@ Si aucun etage ne repond, la chaine francaise sort telle quelle. Ce n est
 pas un echec silencieux : le cas 7 de `tests/test_i18n.py` exerce l outil
 sur des archives reelles et ECHOUE si le moindre residu apparait. La
 couverture est donc MESUREE, jamais affirmee.
+
+DEUX QUESTIONS DIFFERENTES, ET C EST LE PIEGE
+---------------------------------------------
+
+`residu` demande << cette chaine est-elle TRADUISIBLE ? >>.
+`devrait_changer` demande << le catalogue promet-il qu elle CHANGE ? >>.
+
+La seconde est la bonne pour un controle par paire. Le 6 novembre,
+`receipt_import.py` ne traduisait rien -- son `import i18n` echouait parce
+que `sys.path[0]` vaut `adapters/` et non la racine -- et `residu` le
+declarait conforme, puisque ses chaines etaient bien au catalogue. Un outil
+entierement francais est ainsi passe pour traduit.
 """
 from __future__ import annotations
 
@@ -1122,6 +1134,19 @@ def traduire(texte: str, langue: str) -> str:
     """
     if langue == FR or not texte:
         return texte
+
+    # Les BLANCS d encadrement sont mis de cote, puis remis. Sans cela,
+    # `"\nempreinte engagee : %s"` ne se trouvait ni par recherche exacte
+    # -- la clef n a pas le `\n` -- ni par motif, puisque les motifs sont
+    # ancres `\A...\Z`. Et on ne peut pas renoncer a cet ancrage : c est
+    # lui qui empeche un format court de mordre dans un format long.
+    noyau = texte.strip()
+    if noyau != texte:
+        coupe = len(texte) - len(texte.lstrip())
+        tete = texte[:coupe]
+        queue = texte[len(texte.rstrip()):]
+        return tete + traduire(noyau, langue) + queue
+
     exact = EXACT.get(texte)
     if exact is not None:
         return exact
@@ -1170,6 +1195,16 @@ def traduire_format(format_fr: str, langue: str) -> str:
     """
     if langue == FR:
         return format_fr
+
+    # Meme raison que dans `traduire` : un format ecrit
+    # `"\nBILAN : %d PASS..."` ne se trouve pas sous la clef sans `\n`.
+    noyau = format_fr.strip()
+    if noyau != format_fr:
+        coupe = len(format_fr) - len(format_fr.lstrip())
+        tete = format_fr[:coupe]
+        queue = format_fr[len(format_fr.rstrip()):]
+        return tete + traduire_format(noyau, langue) + queue
+
     pose = FORMATS.get(format_fr)
     if pose is not None:
         return pose
@@ -1203,6 +1238,24 @@ _MARQUEURS_FR = (
     "declare", "empreinte", "manifeste", "archive", "membre", "controle",
     "verifie", "aucune", "portee", "fournir", "corpus d entree",
 )
+
+
+def devrait_changer(texte: str, langue: str) -> bool:
+    """Le catalogue promet-il une traduction DIFFERENTE pour `texte` ?
+
+    A distinguer soigneusement de `couvert`, qui dit seulement que la
+    chaine est connue. Certaines entrees s ecrivent pareil dans les deux
+    langues -- << manifest.json present >> -- et pour celles-la la reponse
+    est non, legitimement.
+
+    Sert au controle par paire : si le francais et l anglais sortent
+    IDENTIQUES alors que cette fonction rend `True`, la traduction n a pas
+    eu lieu. C est ce controle, et non `residu`, qui attrape un outil dont
+    l `import i18n` a echoue et dont le repli silencieux a pris le relais.
+    """
+    if langue == FR or not texte.strip():
+        return False
+    return traduire(texte, langue) != texte
 
 
 def residu(texte: str, langue: str) -> bool:

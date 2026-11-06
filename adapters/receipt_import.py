@@ -40,6 +40,16 @@ import sys
 from pathlib import Path
 
 
+# La racine du depot doit etre sur `sys.path` AVANT d importer `i18n` :
+# lance comme `python adapters/receipt_import.py`, `sys.path[0]` vaut
+# `adapters/`, pas la racine. Sans ces deux lignes, `import i18n` echoue,
+# le repli silencieux prend le relais, et `--lang en` ne traduit RIEN --
+# constate le 6 novembre sur le resultat de fusion de la PR #9.
+# `reconcile.py` y echappait par accident : il importe deja `bind`, donc
+# il posait la racine pour une autre raison.
+RACINE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RACINE))
+
 # ---------------------------------------------------------------------------
 # La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
 # cote, cet outil tourne et rend exactement les memes verdicts, en francais.
