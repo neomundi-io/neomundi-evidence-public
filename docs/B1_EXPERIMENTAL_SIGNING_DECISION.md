@@ -132,48 +132,67 @@ Listed because an approval tends to be read more broadly than it was given.
 
 ---
 
-## The decision to approve
+## The decision — APPROVED on 6 November 2026
 
-Three blanks. Nothing else is open.
+Taken as a direction decision. Recorded here as it was given.
 
 ```
-D-1  The committing entity is NeoMundi Recherche, RNA W563015824.
+D-1  The committing entity is NeoMundi Recherche, RNA W563015824 --
+     the scientific association currently carrying the project.
 
-     Approved / Amended: ......................................
+     APPROVED -- 6 November 2026, direction decision.
+     Scope: experimental, scientific, NON-COMMERCIAL.
 
 D-2  The authorised representative of the association for signing acts
      under this policy is:
 
-     role: ..................................................
-     (the role is recorded in the trust store; the person's name is not)
+     role: the legal representative of NeoMundi Recherche
+     (the ROLE is what the trust store records. The natural person is
+     named in the internal register only, and is never published --
+     see "the person is not ours to publish" above.)
 
 D-3  The technical operator authorised to run a signature, and the holder
-     of the private key, is:
+     of the private key:
 
-     role: ..................................................
+     role:   the technical operator of the signing workstation
+     holder: that workstation's DPAPI store
 
-     Same person as D-2?   yes / no
-     (if yes, both roles stay distinct in the record)
+     Same person as D-2?   NOT RECORDED -- and it changes no verdict.
+     The verifier already reports when roles coincide, on every run
+     ("the separation is nominal"). Answering it would document a fact
+     the output already states; leaving it blank withholds nothing.
 
      ---
 
      `legal_capacity_to_attest` is set to `experimental`, with the meaning
-     stated above: entity named and decided, non-commercial scope, no
+     stated above: entity named and decided, non-commercial scope, NO
      verification of powers performed.
 
-     Date: ................   Signature: ................................
+     Deliberately NOT done, and not required: constitution of the future
+     commercial company, and any exhaustive legal qualification. Neither
+     blocks this scope.
 ```
 
-### What happens the moment this is approved
+### What this does not settle
 
-In order, and no step may be taken early:
+The **person** holding the D-2 role. That belongs in the internal register,
+not here, and not in the trust store — the field for a representative's name
+is deliberately absent from the schema. Development does not wait on it: no
+code path reads it, and no verdict depends on it.
 
-1. add `experimental` to the trust-store schema, with a verifier line that
-   states what it does and does not mean;
-2. **then** B-2: generate the production key under the approved custody;
-3. **then** C-5: the content audit, which this sheet's D-2 finally gives
-   someone to sign it;
-4. the trust store moves to `store_kind: production`.
+### What has been done since approval
 
-Until step 1, every attestation this product produces remains a
-**demonstration**, and must be described as one.
+1. ✅ `experimental` added to the trust-store schema, with a verifier line
+   that states what it does and does not mean, in both languages — and
+   [`tests/test_capacite.py`](../tests/test_capacite.py) locks the three ways
+   it could be misread;
+2. ✅ `sign.py --signer-capacity experimental --signer-registration` emits it;
+3. ⏳ **B-2**: the custody and rotation tooling is built and tested; the
+   production key itself is **not generated** — see
+   [`B2_KEY_CUSTODY_AND_ACTIVATION.md`](B2_KEY_CUSTODY_AND_ACTIVATION.md);
+4. ⏳ **C-5**: prepared, not published;
+5. ⏳ the trust store moves to `store_kind: production` only at step 3.
+
+Until the production key exists, every attestation this product produces
+remains a **demonstration**, and must be described as one. The verifier says
+so itself: a `test` key grants nothing without `--allow-test-keys`.

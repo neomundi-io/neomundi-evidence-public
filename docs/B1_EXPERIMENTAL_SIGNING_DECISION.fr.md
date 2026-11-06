@@ -138,49 +138,71 @@ pleine.
 
 ---
 
-## La décision à approuver
+## La décision — APPROUVÉE le 6 novembre 2026
 
-Trois blancs. Rien d'autre n'est ouvert.
+Prise comme décision de direction. Consignée telle qu'elle a été donnée.
 
 ```
-D-1  L entite engageante est NeoMundi Recherche, RNA W563015824.
+D-1  L entite engageante est NeoMundi Recherche, RNA W563015824--
+     l association scientifique portant actuellement le projet.
 
-     Approuve / Amende : ......................................
+     APPROUVE -- 6 novembre 2026, decision de direction.
+     Perimetre : experimental, scientifique, NON COMMERCIAL.
 
 D-2  Le representant habilite de l association pour les actes de signature
      sous cette politique est :
 
-     role : .................................................
-     (le role est consigne au magasin ; le nom de la personne non)
+     role : le representant legal de NeoMundi Recherche
+     (c est le ROLE que le magasin consigne. La personne physique est
+     nommee au registre interne seulement, et n est jamais publiee --
+     voir << le nom de la personne n est pas a nous de le publier >>.)
 
 D-3  L operateur technique autorise a lancer une signature, et le
-     detenteur de la cle privee, est :
+     detenteur de la cle privee :
 
-     role : .................................................
+     role      : l operateur technique du poste de signature
+     detenteur : le magasin DPAPI de ce poste
 
-     Meme personne qu en D-2 ?   oui / non
-     (si oui, les deux roles restent distincts au registre)
+     Meme personne qu en D-2 ?   NON RENSEIGNE -- et cela ne change
+     aucun verdict. Le verificateur rapporte deja la coincidence des
+     roles, a chaque passage (<< la separation est nominale >>). Y
+     repondre documenterait un fait que la sortie enonce deja ; le
+     laisser en blanc ne retient rien.
 
      ---
 
      `legal_capacity_to_attest` vaut `experimental`, au sens enonce
      ci-dessus : entite nommee et decidee, perimetre non commercial,
-     aucune verification des pouvoirs effectuee.
+     AUCUNE verification des pouvoirs effectuee.
 
-     Date : ...............   Signature : ..............................
+     Volontairement NON FAIT, et non requis : la constitution de la
+     future societe commerciale, et toute qualification juridique
+     exhaustive. Ni l une ni l autre ne bloque ce perimetre.
 ```
 
-### Ce qui se passe au moment de l'approbation
+### Ce que ceci ne tranche pas
 
-Dans cet ordre, et aucun geste ne peut être pris en avance :
+La **personne** qui porte le rôle D-2. Sa place est au registre interne, pas
+ici et pas au magasin de confiance — le champ accueillant le nom d'un
+représentant est délibérément absent du schéma. Les développements ne
+l'attendent pas : aucun chemin de code ne le lit, et aucun verdict n'en
+dépend.
 
-1. ajouter `experimental` au schéma du magasin, avec une ligne de
-   vérificateur qui dise ce que cela signifie et ce que cela ne signifie
-   pas ;
-2. **ensuite** B-2 : générer la clé de production sous la garde approuvée ;
-3. **ensuite** C-5 : l'audit de contenu, à qui le D-2 de cette fiche donne
-   enfin quelqu'un pour le valider ;
-4. le magasin passe en `store_kind: production`.
+### Ce qui a été fait depuis l'approbation
 
-Jusqu'au geste 1, toute attestation que ce produit émet reste une
-**démonstration**, et doit être décrite comme telle.
+1. ✅ `experimental` ajouté au schéma du magasin, avec une ligne de
+   vérificateur qui dit ce que cela signifie et ce que cela ne signifie pas,
+   dans les deux langues — et
+   [`tests/test_capacite.py`](../tests/test_capacite.py) verrouille les trois
+   façons de la mal lire ;
+2. ✅ `sign.py --signer-capacity experimental --signer-registration` l'émet ;
+3. ⏳ **B-2** : l'outillage de garde et de rotation est construit et testé ;
+   la clé de production elle-même n'est **pas générée** — voir
+   [`B2_KEY_CUSTODY_AND_ACTIVATION.fr.md`](B2_KEY_CUSTODY_AND_ACTIVATION.fr.md) ;
+4. ⏳ **C-5** : préparé, non publié ;
+5. ⏳ le magasin passe en `store_kind: production` seulement au geste 3.
+
+Tant que la clé de production n'existe pas, toute attestation que ce produit
+émet reste une **démonstration**, et doit être décrite comme telle. Le
+vérificateur le dit de lui-même : une clé `test` n'accorde rien sans
+`--allow-test-keys`.
