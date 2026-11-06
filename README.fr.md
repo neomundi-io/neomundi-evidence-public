@@ -279,6 +279,9 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
 | [`docs/TIMESTAMPING.fr.md`](docs/TIMESTAMPING.fr.md) | horodatage indépendant par OpenTimestamps : ce qu'il prouve, et pourquoi `PENDING` ne prouve aucune date |
 | [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
+| [`docs/V1_CLOSURE_PLAN.fr.md`](docs/V1_CLOSURE_PLAN.fr.md) | le plan de clôture des conditions restantes, l'ordre de réalisation et les verdicts |
+| [`docs/B1_EXPERIMENTAL_SIGNING_DECISION.fr.md`](docs/B1_EXPERIMENTAL_SIGNING_DECISION.fr.md) | B-1 — la politique de signature expérimentale, en fiche de décision à approuver |
+| [`docs/B2_KEY_CUSTODY_AND_ACTIVATION.fr.md`](docs/B2_KEY_CUSTODY_AND_ACTIVATION.fr.md) | B-2 — garde et activation de la clé Ed25519 réelle, et pourquoi elle est distincte de RGC |
 | [`docs/V1_QUALIFICATION.fr.md`](docs/V1_QUALIFICATION.fr.md) | le sprint de qualification : les huit conditions, et deux verdicts GO/NO-GO distincts |
 | [`docs/SIGNING_POLICY.fr.md`](docs/SIGNING_POLICY.fr.md) | qui s'engage, et la garde de la clé : les cinq rôles, et pourquoi `compromised` invalide le passé |
 | [`docs/ADR-001-ANCHORING.fr.md`](docs/ADR-001-ANCHORING.fr.md) | ADR-001 : les quatre prétentions temporelles, et pourquoi une hauteur de bloc n'est pas une date |
