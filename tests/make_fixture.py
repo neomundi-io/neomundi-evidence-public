@@ -504,11 +504,22 @@ def construire(sortie: Path, profil: str = "v2") -> tuple[Path, Path]:
                 "binding": "binding",
                 "first_observation_id": premiere["observation_id"],
                 "first_recording_path": nom_premier,
+                # Les lignes de base dependent du PROFIL : `v2` declare son
+                # contrat de completude, donc ce controle y passe PASS ; `v1`
+                # ne le declare pas, donc il y reste NOT TESTED.
+                #
+                # Les quatre valeurs sont ecrites ici, et nulle part ailleurs.
+                # La CI les lit depuis ce descripteur -- une seule source de
+                # verite, aucun nombre recopie a la main. C est ce qui a
+                # attrape l oubli du 6 novembre : `verify_avec_corpus` avait
+                # ete mis a jour, `verify_sans_corpus` non.
                 "attendu": {
-                    "verify_avec_corpus": ("BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED"
-                                           if profil != "v1" else
-                                           "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"),
-                    "verify_sans_corpus": "BILAN : 17 PASS, 0 FAIL, 3 NOT TESTED",
+                    "verify_avec_corpus": (
+                        "BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED" if profil != "v1"
+                        else "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"),
+                    "verify_sans_corpus": (
+                        "BILAN : 18 PASS, 0 FAIL, 3 NOT TESTED" if profil != "v1"
+                        else "BILAN : 17 PASS, 0 FAIL, 4 NOT TESTED"),
                 },
             },
             ensure_ascii=False,

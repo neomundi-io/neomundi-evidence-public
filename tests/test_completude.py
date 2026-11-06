@@ -224,6 +224,38 @@ def main() -> int:
              v1.read_bytes() != v2.read_bytes(),
              "versionner, et non reecrire : les preuves historiques tiennent")
 
+        # ---- 13 et 14. LE DESCRIPTEUR DIT-IL LA VERITE ? ---------------
+        #
+        # La CI lit ses lignes de base dans `fixture.json` -- une seule
+        # source de verite, aucun nombre recopie a la main. Mais RIEN ne
+        # verifiait localement que ce descripteur dise vrai.
+        #
+        # Le 6 novembre, l ajout du controle de completude a deplace les
+        # quatre valeurs et une seule a ete mise a jour. La CI l a attrape ;
+        # une suite locale aurait du le faire avant elle. Ces deux cas sont
+        # ce controle manquant.
+        for numero, archive, corpus, profil in (("13", v2, corpus2, "v2"),
+                                                ("14", v1, corpus1, "v1")):
+            descripteur = json.loads(
+                (archive.parent / "fixture.json").read_bytes())["attendu"]
+            _, avec = verifier(archive, corpus)
+            _, sans = verifier(archive)
+            obtenu_avec = next((l for l in avec.splitlines()
+                                if l.startswith("BILAN")), "")
+            obtenu_sans = next((l for l in sans.splitlines()
+                                if l.startswith("BILAN")), "")
+            ecarts = []
+            if obtenu_avec != descripteur["verify_avec_corpus"]:
+                ecarts.append("avec corpus : descripteur %r, obtenu %r"
+                              % (descripteur["verify_avec_corpus"], obtenu_avec))
+            if obtenu_sans != descripteur["verify_sans_corpus"]:
+                ecarts.append("sans corpus : descripteur %r, obtenu %r"
+                              % (descripteur["verify_sans_corpus"], obtenu_sans))
+            pose(numero,
+                 "profil %s : le descripteur dit les lignes de base REELLES" % profil,
+                 not ecarts,
+                 "les 2 valeurs concordent" if not ecarts else " ; ".join(ecarts))
+
     finally:
         shutil.rmtree(travail, ignore_errors=True)
 
