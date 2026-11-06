@@ -1,0 +1,31 @@
+L INSTRUMENT DE L AUDITEUR N EST PAS FIGE
+========================================================================
+
+Horodatages de derniere ecriture (heure locale) :
+   oda3_probe.py                      2026-11-06 08:58:24
+   oda3_experiments.py                2026-11-06 08:49:34
+   06_oda3_probe.json                 2026-11-06 08:57:52
+   07_experiments.json                2026-11-06 08:49:43
+
+Meme dossier V1, empreinte e31e12bb7e32c7a3...
+   sonde en direct, audit initial (run 06)  : {"fact": 6, "fail": 0, "not_tested": 2, "pass": 1}  -> 9 controles
+   sonde en direct, ma reevaluation (run 01): {"fact": 6, "fail": 0, "not_tested": 2, "pass": 1}  -> 9 controles
+   => IDENTIQUES. La sonde actuelle est coherente avec le run 06.
+
+   sonde APPELEE PAR les experiences, audit initial (run 07) :
+      ODA3 PROBE : 3 PASS, 0 FAIL, 0 NOT TESTED, 4 FACT  -> 7 controles
+   sonde APPELEE PAR les experiences, ma reevaluation (run 04) :
+      ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT  -> 9 controles
+
+CONSEQUENCE METHODOLOGIQUE
+------------------------------------------------------------------------
+La sonde a gagne deux controles entre le run 07 de l audit initial et
+maintenant. Elle n est pas suivie par Git : aucune revision ne l identifie.
+
+Donc la colonne `oda3_probe.py` du tableau d experiences initial N EST PAS
+COMPARABLE a la mienne. Les colonnes `verify.py` et `verify_attestation.py`
+le sont : ce sont nos outils, a la revision ee78214.
+
+En particulier, OD-E passe de `1 FAIL` a `0 FAIL` cote sonde. Ce n est NI une
+regression de notre produit, NI une amelioration : c est un changement
+d instrument. Le lire comme une regression serait une erreur de methode.

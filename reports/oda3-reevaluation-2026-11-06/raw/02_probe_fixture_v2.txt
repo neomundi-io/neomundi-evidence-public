@@ -1,0 +1,17 @@
+ODA3 probe -- C:/Users/Danielle/AppData/Local/Temp/claude/C--Users-Danielle-Documents-NEOMUNDI-PRIVATE/ffbc4d2b-1c86-427b-8284-b1d8fb394f34/scratchpad/rv2/NEOMUNDI_EVIDENCE_CI_FIXTURE.zip
+archive sha256 : 46462cf98f935acba62c1c98fc6b3f39852d410b540e36362582dfb9de1da64e
+
+[FACT      ] C-0 the archive carries 16 of the 21 ledger records it declares  -- 5 record(s) of the source ledger are NOT in this archive; their record_type is not named here
+[FACT      ] C-0 sequence range 2..20, 3 hole(s), 0 duplicate(s)  -- first holes: [6, 11, 16]
+[NOT TESTED] C-1 link consistency over 16 records  -- the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger.
+[NOT TESTED] C-2 self-hash recomputation on 16 record(s)  -- 16 divergent -- INCONCLUSIVE: may be this probe's canonicalisation, or the projection. Confront with `station ledger verify`
+[NOT TESTED] C-3 declared head 2d7890d2eaf6ebff...  -- the record it commits to may be one of the withheld ones; the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger.
+[FACT      ] C-4 members carrying a record_sha256  -- chained: measurements.jsonl, observations.jsonl, reference_evaluations.jsonl, replay_provenance.jsonl | NOT chained: none
+[FACT      ] C-5 observation fields: 29 valued, 3 always null  -- always null: cost, error, system_fingerprint
+[FACT      ] C-5 every non-`measured` record states a reason  -- 2 incomplete of 4 measurements
+
+ODA3 PROBE : 0 PASS, 0 FAIL, 3 NOT TESTED, 5 FACT
+
+What this probe does NOT establish: the origin of the archive, the
+time of any event, the correctness of any measured signal, or that
+any execution took place. It reads an archive and nothing else.

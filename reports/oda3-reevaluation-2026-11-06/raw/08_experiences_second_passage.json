@@ -1,0 +1,91 @@
+{
+ "schema": "oda3.experiments/1",
+ "original_archive_sha256": "e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6",
+ "cases": [
+  {
+   "case": "OD-A",
+   "alteration": "one null byte appended after the ZIP central directory",
+   "archive_sha256": "5319ac9fe7b464ab15e5c7f91986b4c332763860fab7d7571676afa602ae622d",
+   "verify.py": {
+    "exit": 0,
+    "bilan": "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"
+   },
+   "verify_attestation.py": {
+    "exit": 1,
+    "bilan": "BILAN : 9 PASS, 1 FAIL, 5 NOT TESTED"
+   },
+   "oda3_probe.py": {
+    "exit": 0,
+    "bilan": "ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT"
+   }
+  },
+  {
+   "case": "OD-B",
+   "alteration": "one hex character changed in the first response_sha256; checksums NOT redone",
+   "archive_sha256": "beadcf641ef5cffd8bdff78af15ee30bb93c6ba0d375ef587390c166d7468ed5",
+   "verify.py": {
+    "exit": 1,
+    "bilan": "BILAN : 18 PASS, 1 FAIL, 3 NOT TESTED"
+   },
+   "verify_attestation.py": {
+    "exit": 1,
+    "bilan": "BILAN : 9 PASS, 1 FAIL, 5 NOT TESTED"
+   },
+   "oda3_probe.py": {
+    "exit": 0,
+    "bilan": "ODA3 PROBE : 0 PASS, 0 FAIL, 3 NOT TESTED, 6 FACT"
+   }
+  },
+  {
+   "case": "OD-C",
+   "alteration": "the LAST record (obs-f6441161b5da93) removed from all five members; counts, measurement tallies, declared ledger head and every checksum rebuilt",
+   "archive_sha256": "e6d41a2e58af95e623d2689a51cee74bf0e89a477178adae332c594c24eabd58",
+   "verify.py": {
+    "exit": 0,
+    "bilan": "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"
+   },
+   "verify_attestation.py": {
+    "exit": 1,
+    "bilan": "BILAN : 9 PASS, 1 FAIL, 5 NOT TESTED"
+   },
+   "oda3_probe.py": {
+    "exit": 0,
+    "bilan": "ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT"
+   }
+  },
+  {
+   "case": "OD-E",
+   "alteration": "an INTERIOR record (index 1) (obs-e0ef56d6eb603d) removed from all five members; counts, measurement tallies, declared ledger head and every checksum rebuilt",
+   "archive_sha256": "4571b43e97d8099e5b44bc3f068b5fe405a010017a51af0dc571d24ace5c3bed",
+   "verify.py": {
+    "exit": 0,
+    "bilan": "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"
+   },
+   "verify_attestation.py": {
+    "exit": 1,
+    "bilan": "BILAN : 9 PASS, 1 FAIL, 5 NOT TESTED"
+   },
+   "oda3_probe.py": {
+    "exit": 0,
+    "bilan": "ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT"
+   }
+  },
+  {
+   "case": "OD-D",
+   "alteration": "the JWS header's `alg` forged from Ed25519 to `none`",
+   "archive_sha256": "e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6",
+   "verify.py": {
+    "exit": 0,
+    "bilan": "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"
+   },
+   "verify_attestation.py": {
+    "exit": 1,
+    "bilan": "BILAN : 8 PASS, 2 FAIL, 5 NOT TESTED"
+   },
+   "oda3_probe.py": {
+    "exit": 0,
+    "bilan": "ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT"
+   }
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+ "schema": "oda3.probe-report/1",
+ "archive_sha256": "46462cf98f935acba62c1c98fc6b3f39852d410b540e36362582dfb9de1da64e",
+ "lines": [
+  {
+   "state": "FACT",
+   "check": "C-0 the archive carries 16 of the 21 ledger records it declares",
+   "detail": "5 record(s) of the source ledger are NOT in this archive; their record_type is not named here"
+  },
+  {
+   "state": "FACT",
+   "check": "C-0 sequence range 2..20, 3 hole(s), 0 duplicate(s)",
+   "detail": "first holes: [6, 11, 16]"
+  },
+  {
+   "state": "NOT TESTED",
+   "check": "C-1 link consistency over 16 records",
+   "detail": "the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger."
+  },
+  {
+   "state": "NOT TESTED",
+   "check": "C-2 self-hash recomputation on 16 record(s)",
+   "detail": "16 divergent -- INCONCLUSIVE: may be this probe's canonicalisation, or the projection. Confront with `station ledger verify`"
+  },
+  {
+   "state": "NOT TESTED",
+   "check": "C-3 declared head 2d7890d2eaf6ebff...",
+   "detail": "the record it commits to may be one of the withheld ones; the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger."
+  },
+  {
+   "state": "FACT",
+   "check": "C-4 members carrying a record_sha256",
+   "detail": "chained: measurements.jsonl, observations.jsonl, reference_evaluations.jsonl, replay_provenance.jsonl | NOT chained: none"
+  },
+  {
+   "state": "FACT",
+   "check": "C-5 observation fields: 29 valued, 3 always null",
+   "detail": "always null: cost, error, system_fingerprint"
+  },
+  {
+   "state": "FACT",
+   "check": "C-5 every non-`measured` record states a reason",
+   "detail": "2 incomplete of 4 measurements"
+  }
+ ],
+ "counts": {
+  "pass": 0,
+  "fail": 0,
+  "not_tested": 3,
+  "fact": 5
+ }
+}
