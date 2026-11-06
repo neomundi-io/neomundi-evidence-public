@@ -613,6 +613,59 @@ EXACT: dict[str, str] = {
         'schema of the store',
     'aucun champ hors schema':
         'no field outside the schema',
+    # B-3 : ingestion d un paquet tiers (adapters/ingest.py).
+    'forme du paquet':
+        'form of the package',
+    'manifeste de soumission':
+        'submission manifest',
+    'que l execution ait eu lieu':
+        'that the execution took place',
+    'hors de portee d une ingestion. Nous recalculons des empreintes de FICHIERS ; qu ils proviennent de l execution annoncee est une declaration, et le restera.':
+        "out of an ingestion's reach. We recompute digests of FILES; that they came from the declared execution is a declaration, and will remain one.",
+    'dossier lu sur place, aucune extraction':
+        'directory read in place, no extraction',
+    'le manifeste n est pas un objet JSON':
+        'the manifest is not a JSON object',
+    'schema du manifeste':
+        'schema of the manifest',
+    'champs obligatoires':
+        'mandatory fields',
+    'identifiant de soumission':
+        'submission identifier',
+    'identite du soumetteur':
+        'identity of the submitter',
+    '`pilot.name_declared` absent ou vide':
+        '`pilot.name_declared` absent or empty',
+    'conditions d execution':
+        'execution conditions',
+    'artefacts declares':
+        'declared artefacts',
+    'aucun artefact declare':
+        'no artefact declared',
+    'empreintes des artefacts declares':
+        'digests of the declared artefacts',
+    'fichiers non declares':
+        'undeclared files',
+    'signatures existantes':
+        'existing signatures',
+    'le paquet ne declare aucune attestation. Son niveau ne depassera donc pas `reference_verifiable`.':
+        'the package declares no attestation. Its level will therefore not exceed `reference_verifiable`.',
+    'provenance de l execution':
+        'provenance of the execution',
+    'aucun champ de provenance declare. Toute affirmation sur l environnement ou l instrument de cette execution est donc `not_demonstrable`.':
+        'no provenance field declared. Any claim about the environment or the instrument of this execution is therefore `not_demonstrable`.',
+    'limites annoncees par le soumetteur':
+        'limits stated by the submitter',
+    'volume du paquet':
+        'volume of the package',
+    'chemins du paquet':
+        'paths in the package',
+    'Le paquet est REJETE : au moins un controle a echoue. Les lignes FAIL ci-dessus disent lesquelles.':
+        'The package is REJECTED: at least one control failed. The FAIL lines above say which.',
+    'Le paquet est INCOMPLET, et ce n est pas un refus : il manque quelque chose que le soumetteur peut fournir.':
+        'The package is INCOMPLETE, and that is not a refusal: something is missing that the submitter can supply.',
+    'Le paquet est ACCEPTE : sa structure et les empreintes qu il declare sont controlees. Les lignes DECLARE restent la parole du soumetteur, et les NON DEMONTRABLE le resteront.':
+        "The package is ACCEPTED: its structure and the digests it declares are controlled. The DECLARED lines remain the submitter's word, and the NOT DEMONSTRABLE ones will stay that way.",
 }
 
 # --------------------------------------------------------------------------
@@ -1178,6 +1231,53 @@ FORMATS: dict[str, str] = {
         'python verify_attestation.py <att.jws> --trust-store <store> \\',
     '--store-digest %s':
         '--store-digest %s',
+    # B-3 : ingestion d un paquet tiers (adapters/ingest.py).
+    'archive ZIP de %d membre(s), %d octets decompresses, depliee':
+        'ZIP archive of %d member(s), %d uncompressed bytes, unpacked',
+    'ni dossier ni archive ZIP lisible : %s':
+        'neither a directory nor a readable ZIP archive: %s',
+    '`%s` absent a la racine du paquet':
+        '`%s` absent from the root of the package',
+    'les %d champs du contrat sont presents':
+        'the %d fields of the contract are present',
+    'non conforme a `^[a-z0-9][a-z0-9-]{2,63}$` : %r':
+        'not conforming to `^[a-z0-9][a-z0-9-]{2,63}$`: %r',
+    '%r -- declaree, et non verifiee. Aucun controle sur un paquet ne peut etablir qui l a produit.':
+        '%r -- declared, and not verified. No control over a package can establish who produced it.',
+    'modele %r, nature %r, fournisseur %r -- declares. Ce paquet ne porte rien qui permette de les confronter.':
+        'model %r, kind %r, provider %r -- declared. This package carries nothing that would let them be confronted.',
+    '%d artefacts, borne %d':
+        '%d artefacts, cap %d',
+    '%d fichier(s) present(s) et non declare(s), donc NON controle(s) : %s':
+        '%d file(s) present and undeclared, therefore NOT controlled: %s',
+    'aucun : les %d fichier(s) du paquet sont tous declares':
+        'none: all %d file(s) in the package are declared',
+    '%d attestation(s) declaree(s), et aucun magasin de confiance fourni. Le fournir avec --trust-store : jamais celui du paquet.':
+        '%d attestation(s) declared, and no trust store supplied. Supply it with --trust-store: never the one inside the package.',
+    'renseignee : %s ; absente : %s. Declaree et non verifiable depuis ce paquet.':
+        'populated: %s; absent: %s. Declared, and not verifiable from this package.',
+    '%d limite(s), conservee(s) verbatim : %s':
+        '%d limit(s), kept verbatim: %s',
+    '%d membres, borne %d':
+        '%d members, cap %d',
+    '%d octets decompresses annonces, borne %d':
+        '%d uncompressed bytes declared, cap %d',
+    '`%s` illisible : %s':
+        '`%s` unreadable: %s',
+    '`execution.%s` absent':
+        '`execution.%s` absent',
+    'au-dela de %d octets au total':
+        'beyond %d bytes in total',
+    'rapport JSON : %s':
+        'JSON report: %s',
+    'membre refuse %r : %s':
+        'member refused %r: %s',
+    'paquet : %s':
+        'package: %s',
+    'VERDICT : %s':
+        'VERDICT: %s',
+    '%s, %d octets':
+        '%s, %d bytes',
 }
 
 

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "neomundi.evidence.submission/1",
+  "title": "NeoMundi Evidence — pilot submission manifest",
+  "description": "What a third party hands us. EVERYTHING in this document is a DECLARATION by the submitter. Ingestion recomputes the digests and the sizes of the declared artefacts, and verifies any attestation against the published trust store; it verifies NOTHING else, and never promotes a declaration to an attested fact. The split is reported line by line: CONTROLLED (we recomputed it), DECLARED (their word, kept verbatim), NOT DEMONSTRABLE (no control could establish it from this submission).",
+  "type": "object",
+  "required": [
+    "schema",
+    "submission_id",
+    "submitted_at_declared",
+    "pilot",
+    "execution",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "neomundi.evidence.submission/1"
+    },
+    "submission_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+      "description": "Stable identifier chosen by the submitter. Never reused for a different submission."
+    },
+    "submitted_at_declared": {
+      "$ref": "#/$defs/instant",
+      "description": "DECLARED by the submitter. No trusted clock takes part, and ingestion never reads its own clock to contradict it."
+    },
+    "pilot": {
+      "type": "object",
+      "description": "DECLARED identity of the submitter. Ingestion does not verify it, and cannot: nothing in a file establishes who wrote it.",
+      "required": ["name_declared"],
+      "additionalProperties": false,
+      "properties": {
+        "name_declared": { "type": "string", "minLength": 1 },
+        "reference_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }],
+          "description": "A ticket, contract or engagement reference, if any. Declared."
+        },
+        "contact_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "What the submitter says was executed. All DECLARED. A digest here is only a claim until the artefact carrying the bytes is supplied and recomputed.",
+      "required": ["kind_declared", "model_declared"],
+      "additionalProperties": false,
+      "properties": {
+        "kind_declared": {
+          "enum": ["single_call", "batch", "replay", "other"]
+        },
+        "model_declared": { "type": "string", "minLength": 1 },
+        "provider_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        },
+        "executed_at_declared": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/instant" }]
+        },
+        "parameters_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "object" }],
+          "description": "Kept VERBATIM. Never normalised: a normalised parameter set is no longer the one that was sent."
+        },
+        "notes_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The files that carry the bytes. Each one is RECOMPUTED at ingestion: this is the only part of the submission that ingestion can establish.",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "bytes", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "RELATIVE path inside the submission, with forward slashes. Absolute paths, drive letters, `..` segments and symbolic links are REFUSED -- a submission must not be able to name a file outside itself."
+          },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "role": {
+            "enum": ["prompt", "response", "recording", "transcript",
+                     "measurement", "receipt", "attestation", "other"],
+            "description": "What the submitter says this file is. Declared: ingestion does not parse the file to confirm its role."
+          },
+          "media_type": {
+            "oneOf": [{ "type": "null" }, { "type": "string" }]
+          }
+        }
+      }
+    },
+    "attestations": {
+      "type": "array",
+      "description": "Detached signatures the submitter already holds. Verified by `verify_attestation.py` -- the SAME verifier an auditor uses, invoked unchanged, its verdict reported verbatim. No second signature engine exists.",
+      "items": {
+        "type": "object",
+        "required": ["jws_path", "subject_path"],
+        "additionalProperties": false,
+        "properties": {
+          "jws_path": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "subject_path": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "trust_store_declared": {
+            "oneOf": [{ "type": "null" }, { "type": "string" }],
+            "description": "Which store the submitter believes vouches for it. Ingestion uses the store the OPERATOR supplies, never one carried by the submission: a package must not carry its own answer to whether its signer is trustworthy."
+          }
+        }
+      }
+    },
+    "provenance_declared": {
+      "type": "object",
+      "description": "Declared provenance of the execution environment. Absent fields are reported ABSENT, never defaulted and never null-filled -- the same discipline as an unmeasured signal.",
+      "additionalProperties": false,
+      "properties": {
+        "code_reference_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        },
+        "environment_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        },
+        "evaluator_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        },
+        "notes_declared": {
+          "oneOf": [{ "type": "null" }, { "type": "string" }]
+        }
+      }
+    },
+    "limits_declared": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What the submitter states their own package does NOT establish. Kept verbatim and reported: a submitter who names their limits is easier to trust than one who names none."
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, second precision, trailing Z. DECLARED in every case."
+    }
+  }
+}

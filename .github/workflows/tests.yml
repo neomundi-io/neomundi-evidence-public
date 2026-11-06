@@ -250,6 +250,16 @@ jobs:
         run: |
           python tests/test_publication.py
 
+      # B-3 : l ingestion d un paquet tiers. `verify.py` n accepte qu une
+      # archive DEJA au format Evidence ; confronte au dossier reel du
+      # 30 octobre -- 21 empreintes declarees, 21 concordantes -- il a refuse
+      # a juste titre. Rien ne convertissait une collecte brute en objet
+      # exploitable. Le cas 13 est le verrou qui compte : aucune ligne de
+      # nature DECLARE ne peut porter PASS.
+      - name: Suite d ingestion -- une declaration n est pas un fait
+        run: |
+          python tests/test_ingestion.py
+
       # La langue ne doit changer que la prose. Un etat, un code de sortie,
       # un nom de champ ou une empreinte qui bouge avec la langue est un
       # defaut. Le cas 7 MESURE la couverture du catalogue au lieu de la
