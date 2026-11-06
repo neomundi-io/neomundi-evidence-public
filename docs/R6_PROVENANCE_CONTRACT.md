@@ -17,6 +17,106 @@
 
 ---
 
+## Correction of 6 November 2026 — the audit revises this proposal
+
+**This document proposed a structure Station already has.** The repository
+audit established it, and the proposal is simplified rather than complicated.
+
+| Link | Actual state | Evidence |
+|---|---|---|
+| The API **emits** provenance | OK | `GovernResponse.evaluators` — per signal: evaluator, model used, status, reason, configuration fingerprints |
+| Station **models its retention** | OK | `src/station/runtime/coverage.py`: `MeasurementCoverage`, record type `measurement_coverage`, with its **anti-secret barrier applied at construction** and its tests |
+| Station **wires** the write | NO | `to_coverage()` has **no caller** in `src/` — only its definition, its re-export and a unit test |
+| The ledger carries it | NO | **0 records** of `measurement_coverage` across three ledgers (actual types: `run`, `runner_attempt`, `observation`, `measurement`, `reference_evaluation`, `replay_provenance`) |
+| The **export** carries it | NO | `station.export.campagne/2` = 8 members, **0 occurrences** of `coverage` in `src/station/runner/export.py` |
+| Evidence consumes it | OK **now** | `adapters/provenance.py`, and `verify.py` accepts `/3` |
+
+**Two rectifications to this document.** Its §3 announced "0 provenance
+fields across 238 measurements": true, and measured on **frozen ledgers**
+written before `coverage.py` existed. The conclusion changes: the gap is not
+conceptual, it is **wiring**.
+
+And its "Part A / Part B" invented a split. `MeasurementCoverage` proposes a
+better one, for a reason I had missed: `Measurement` is a **sealed schema**,
+and the digest of every record already written depends on the shape of the
+contract. A **new contract** migrates none of them. So the existing model is
+adopted, not mine.
+
+---
+
+## The three decisions, argued
+
+### D1 — wire `to_coverage` into the write path
+
+**Recommendation: YES, and it is the cheapest of the three.** The model
+exists, is tested, carries its own anti-secret barrier, and is a **separate**
+record type: no sealed schema migrates, no already-written digest moves. It
+is a connection, not a design.
+
+Without D1, D3 has nothing to carry.
+
+*Station, separate branch and PR. Not done here: it touches the write path of
+a live measurement.*
+
+### D2 — instrument the under-populated evaluators
+
+**Recommendation: NOT NOW, and above all not as a prerequisite.**
+
+Three situations hide behind "under-populated", and conflating them would be
+wrong in two directions: a **local computation** has no model and no prompt —
+its nulls are **correct**, and `adapters/provenance.py` does not read them as
+a gap; two evaluators **do call** a model without reporting their engine —
+that is a genuine under-population, API-side; one populates everything,
+because it crosses an HTTP boundary and had to.
+
+The contract must therefore **accept `null` with a reason**, rather than wait
+on instrumentation that would fabricate a plausible value. A fabricated
+provenance is indistinguishable from a real one, and that is the one risk in
+this work that cannot be undone.
+
+### D3 — the export carries the member
+
+**Recommendation: YES.** One more member, additive, the other eight
+unchanged. `verify.py` already accepts `/3`, and a `/2` archive stays
+readable: provenance controls return `NOT TESTED` there, never `FAIL` — the
+gap is the producer's, exactly as for the completeness contract.
+
+---
+
+## The consolidated contract — `station.export.campagne/3`
+
+**One member added: `measurement_coverage.jsonl`.** It carries the
+`MeasurementCoverage` records as Station writes them, in the ledger's
+original bytes, uninterpreted:
+
+```
+coverage_id | measurement_id | observation_id | measurement_version
+coverage_version | api_measurement_status | checks_attempted
+checks_succeeded | failed_checks | degraded_g_inputs
+unmeasured_signals | evaluators | reported_at
+```
+
+`evaluators` is **opaque and verbatim**: one dictionary per signal, whose
+present fields Evidence observes and whose absent ones it names, never
+completing one. The six diagnostic fields are **all optional**, and their
+`None` carries meaning: an earlier API does not serve them, and such a
+silence cannot claim that all went well.
+
+**What Evidence does with it**, and the three levels it derives:
+
+| Level | When |
+|---|---|
+| `instrument_non_documente` | no coverage member, or no `evaluators` at all |
+| `instrument_declare` | evaluators are named, with no configuration fingerprint |
+| `instrument_declare_et_configure` | named **and** configured, for every signal that has a model |
+
+**There is no fourth level.** `instrument_verifie` would be a claim no
+archive can support: that the declared evaluator is the one that ran would
+require observing the measurement. It is a permanent `NOT TESTED`, and case
+11 of `tests/test_provenance.py` fails if a fourth level appears.
+
+---
+
 ## The short answer
 
 **The provenance cannot be documented from existing data, so R-6 requires a
@@ -114,6 +214,10 @@ ordering is the wrong way round.
 ---
 
 ## Contract proposal — `station.export.campagne/3`
+
+> **SUPERSEDED** by "The consolidated contract" above. This version invented
+> a Part A / Part B split; `MeasurementCoverage` proposes a better one, and it
+> exists. Kept as a record of the reasoning, and **not to be implemented**.
 
 A **new version**, not a modification of `/2`. Three parts.
 

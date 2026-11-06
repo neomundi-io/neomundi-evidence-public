@@ -67,6 +67,7 @@ except ImportError:  # pragma: no cover - chemin de degradation
 SCHEMAS_CONNUS = (
     "station.export.campagne/1",
     "station.export.campagne/2",
+    "station.export.campagne/3",
     "neomundi.evidence.med-demo/1",
 )
 
@@ -83,6 +84,21 @@ MEMBRES_PAR_SCHEMA = {
         "observations.csv",
         "observations.jsonl",
         "measurements.jsonl",
+        "reference_evaluations.jsonl",
+        "replay_provenance.jsonl",
+        "manifest.json",
+        "rapport.md",
+        "checksums.sha256",
+    ),
+    # `/3` ajoute UN membre a `/2` : la provenance instrumentale, telle que
+    # l API la sert et sans interpretation. Un membre de plus, et aucun
+    # changement aux sept autres -- une archive `/2` reste donc lisible, et
+    # les controles de provenance y rendent NOT TESTED plutot que FAIL.
+    "station.export.campagne/3": (
+        "observations.csv",
+        "observations.jsonl",
+        "measurements.jsonl",
+        "measurement_coverage.jsonl",
         "reference_evaluations.jsonl",
         "replay_provenance.jsonl",
         "manifest.json",

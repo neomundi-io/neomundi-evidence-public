@@ -145,3 +145,31 @@ And an attestation verified under this chain is signed under
 `legal_capacity_to_attest: experimental` — the entity is named and has
 decided, and **no verification of its powers has been performed**. It is
 never a legal certification. The verifier says so on every run.
+
+## 7. If your package comes from a Station export
+
+A `station.export.campagne` export is read by a second tool, which walks the
+chain **Execution → Measurement → Evaluator → Configuration → Export →
+Evidence**:
+
+```sh
+python adapters/provenance.py <export.zip> --out provenance.json --md provenance.md
+```
+
+It returns an **instrumental provenance level**:
+
+| Level | What it says |
+|---|---|
+| `instrument_non_documente` | the export does not document its evaluators. The signals stay usable; what falls away is what can be **claimed** about how they were obtained |
+| `instrument_declare` | evaluators are named, with no configuration fingerprint |
+| `instrument_declare_et_configure` | named **and** configured |
+
+**There is no fourth level.** That the declared evaluator is the one that ran
+would require observing the measurement: a permanent `NOT TESTED`.
+
+The report speaks the **same nature vocabulary** as ingestion — `CONTROLE`,
+`DECLARE`, `NON DEMONTRABLE` — so it plugs into this chain without
+translation. An absent evaluator is there **neither a measurement failure nor
+a favourable score**: it produces no `FAIL`.
+
+Contract detail: [`R6_PROVENANCE_CONTRACT.md`](R6_PROVENANCE_CONTRACT.md).

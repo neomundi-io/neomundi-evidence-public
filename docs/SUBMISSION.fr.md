@@ -148,3 +148,31 @@ Et une attestation vérifiée sous cette chaîne est signée en
 `legal_capacity_to_attest: experimental` — l'entité est nommée et a décidé, et
 **aucune vérification de ses pouvoirs n'a été faite**. Ce n'est jamais une
 certification juridique. Le vérificateur le dit à chaque passage.
+
+## 7. Si votre paquet vient d'un export Station
+
+Un export `station.export.campagne` se lit avec un second outil, qui parcourt
+la chaîne **Exécution → Mesure → Évaluateur → Configuration → Export →
+Preuve** :
+
+```sh
+python adapters/provenance.py <export.zip> --out provenance.json --md provenance.md
+```
+
+Il rend un **niveau de provenance instrumentale** :
+
+| Niveau | Ce qu'il dit |
+|---|---|
+| `instrument_non_documente` | l'export ne documente pas ses évaluateurs. Les signaux restent exploitables ; ce qui tombe est ce qu'on peut **affirmer** de la façon dont ils ont été obtenus |
+| `instrument_declare` | les évaluateurs sont nommés, sans empreinte de configuration |
+| `instrument_declare_et_configure` | nommés **et** configurés |
+
+**Il n'existe pas de quatrième niveau.** Que l'évaluateur déclaré soit celui
+qui a tourné exigerait d'observer la mesure : c'est un `NOT TESTED` permanent.
+
+Le rapport parle le **même vocabulaire de natures** que l'ingestion —
+`CONTROLE`, `DECLARE`, `NON DEMONTRABLE` — donc il se branche dans cette
+chaîne sans traduction. Un évaluateur absent n'y est **ni un échec de mesure
+ni un score favorable** : il ne produit aucun `FAIL`.
+
+Détail du contrat : [`R6_PROVENANCE_CONTRACT.fr.md`](R6_PROVENANCE_CONTRACT.fr.md).
