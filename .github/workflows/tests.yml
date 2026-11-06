@@ -260,6 +260,16 @@ jobs:
         run: |
           python tests/test_ingestion.py
 
+      # R-6 : la provenance instrumentale. L API sert, par signal,
+      # l evaluateur et ses empreintes de configuration ; Station en
+      # modelise la conservation ; et l export `/2` ne les transporte pas.
+      # Les cas 2, 3 et 10 sont les verrous : une absence de provenance ne
+      # devient jamais une provenance attestee, un evaluateur absent n est
+      # ni un echec ni un score, et aucun indemontrable ne porte PASS.
+      - name: Suite de provenance -- nommer ce qui manque
+        run: |
+          python tests/test_provenance.py
+
       # La langue ne doit changer que la prose. Un etat, un code de sortie,
       # un nom de champ ou une empreinte qui bouge avec la langue est un
       # defaut. Le cas 7 MESURE la couverture du catalogue au lieu de la

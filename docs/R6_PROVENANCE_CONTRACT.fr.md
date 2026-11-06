@@ -17,6 +17,108 @@ ODA3 : *consigner la provenance de l'évaluateur dans `measurements.jsonl`.*
 
 ---
 
+## Correction du 6 novembre 2026 — l'audit révise cette proposition
+
+**Ce document proposait une structure que Station possède déjà.** L'audit des
+dépôts l'a établi, et la proposition en est simplifiée plutôt que compliquée.
+
+| Maillon | État réel | Preuve |
+|---|---|---|
+| L'API **émet** la provenance | ✅ | `GovernResponse.evaluators` — par signal : l'évaluateur, le modèle utilisé, le statut, le motif, des empreintes de configuration |
+| Station **modélise sa conservation** | ✅ | `src/station/runtime/coverage.py` : `MeasurementCoverage`, type d'enregistrement `measurement_coverage`, avec sa **barrière anti-secret appliquée à la construction** et ses tests |
+| Station **câble** l'écriture | ❌ | `to_coverage()` n'a **aucun appelant** dans `src/` — seulement sa définition, sa réexportation et un test unitaire |
+| Le registre en porte | ❌ | **0 enregistrement** `measurement_coverage` sur trois registres (types réels : `run`, `runner_attempt`, `observation`, `measurement`, `reference_evaluation`, `replay_provenance`) |
+| L'**export** le transporte | ❌ | `station.export.campagne/2` = 8 membres, **0 occurrence** de `coverage` dans `src/station/runner/export.py` |
+| Evidence le consomme | ✅ **désormais** | `adapters/provenance.py`, et `verify.py` accepte `/3` |
+
+**Deux rectifications de ce document.** Son §3 annonçait « 0 champ de
+provenance sur 238 mesures » : c'est vrai, et c'était mesuré sur des
+**registres gelés** écrits avant que `coverage.py` n'existe. La conclusion
+change : le trou n'est pas conceptuel, il est de **câblage**.
+
+Et sa « Partie A / Partie B » inventait un découpage. `MeasurementCoverage`
+en propose un meilleur, pour une raison que je n'avais pas vue :
+`Measurement` est un **schéma scellé**, et l'empreinte de chaque
+enregistrement déjà écrit dépend de la forme du contrat. Un **contrat neuf**
+n'en migre aucun. C'est donc le modèle existant qui est adopté, et non le
+mien.
+
+---
+
+## Les trois décisions, argumentées
+
+### D1 — câbler `to_coverage` dans le chemin d'écriture
+
+**Recommandation : OUI, et c'est la moins chère des trois.** Le modèle
+existe, il est testé, il porte sa propre barrière anti-secret, et c'est un
+type d'enregistrement **distinct** : aucun schéma scellé ne migre, aucune
+empreinte déjà écrite ne bouge. C'est un branchement, pas une conception.
+
+Sans D1, D3 n'a rien à transporter.
+
+*Station, branche et PR séparées. Non fait ici : cela touche le chemin
+d'écriture d'une mesure vivante.*
+
+### D2 — instrumenter les évaluateurs sous-renseignés
+
+**Recommandation : PAS MAINTENANT, et surtout pas en prérequis.**
+
+Trois situations se cachent derrière « sous-renseigné », et les confondre
+serait faux dans deux directions : un **calcul local** n'a ni modèle ni
+prompt — ses nuls sont **corrects**, et `adapters/provenance.py` ne les lit
+pas comme un trou ; deux évaluateurs **appellent** un modèle sans rapporter
+leur moteur — c'est une vraie sous-population, côté API ; un seul renseigne
+tout, parce qu'il franchit une frontière HTTP et qu'il a bien fallu.
+
+Le contrat doit donc **accepter `null` avec un motif**, plutôt que d'attendre
+une instrumentation qui fabriquerait une valeur plausible. Une provenance
+inventée est indiscernable d'une provenance réelle, et c'est le seul risque
+de ce chantier qu'on ne peut pas rattraper.
+
+### D3 — l'export porte le membre
+
+**Recommandation : OUI.** Un membre de plus, additif, et les huit autres
+inchangés. `verify.py` accepte déjà `/3`, et une archive `/2` reste lisible :
+les contrôles de provenance y rendent `NOT TESTED`, jamais `FAIL` — le trou
+est celui du producteur, exactement comme pour le contrat de complétude.
+
+---
+
+## Le contrat consolidé — `station.export.campagne/3`
+
+**Un membre ajouté : `measurement_coverage.jsonl`.** Il porte les
+enregistrements `MeasurementCoverage` tels que Station les écrit, dans les
+octets d'origine du registre, sans interprétation :
+
+```
+coverage_id | measurement_id | observation_id | measurement_version
+coverage_version | api_measurement_status | checks_attempted
+checks_succeeded | failed_checks | degraded_g_inputs
+unmeasured_signals | evaluators | reported_at
+```
+
+`evaluators` est **opaque et verbatim** : un dictionnaire par signal, dont
+Evidence constate les champs présents et nomme les absents, sans jamais en
+compléter un. Les six champs de diagnostic sont **tous optionnels**, et leur
+`None` est porteur : une API antérieure ne les sert pas, et un tel silence ne
+peut pas affirmer que tout s'est bien passé.
+
+**Ce qu'Evidence en fait**, et les trois niveaux qu'il en dérive :
+
+| Niveau | Quand |
+|---|---|
+| `instrument_non_documente` | pas de membre de couverture, ou aucun `evaluators` |
+| `instrument_declare` | les évaluateurs sont nommés, sans empreinte de configuration |
+| `instrument_declare_et_configure` | nommés **et** configurés, pour tous les signaux qui ont un modèle |
+
+**Il n'existe pas de quatrième niveau.** `instrument_verifie` serait une
+prétention qu'aucune archive ne peut soutenir : que l'évaluateur déclaré soit
+celui qui a tourné exigerait d'observer la mesure. C'est un `NOT TESTED`
+permanent, et le cas 11 de `tests/test_provenance.py` échoue si un quatrième
+niveau apparaît.
+
+---
+
 ## La réponse courte
 
 **La provenance ne peut pas être documentée depuis les données existantes :
@@ -118,6 +220,11 @@ inversé.
 ---
 
 ## Proposition de contrat — `station.export.campagne/3`
+
+> **REMPLACEE** par « Le contrat consolidé » ci-dessus. Cette version
+> inventait un découpage Partie A / Partie B ; `MeasurementCoverage` en
+> propose un meilleur, et il existe. Conservée comme relevé du raisonnement,
+> et **ne pas l'implémenter**.
 
 Une **nouvelle version**, pas une modification de `/2`. Trois parties.
 
