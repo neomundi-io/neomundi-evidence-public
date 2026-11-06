@@ -1,0 +1,57 @@
+{
+ "schema": "oda3.probe-report/1",
+ "archive_sha256": "e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6",
+ "lines": [
+  {
+   "state": "FACT",
+   "check": "C-0 the archive carries 16 records while its manifest declares 4",
+   "detail": "the declared count CONTRADICTS the delivered records by 12; no control in the product compares them"
+  },
+  {
+   "state": "FACT",
+   "check": "C-0 sequence range 1..4, 0 hole(s), 12 duplicate(s)",
+   "detail": "`sequence` restarts per member: it is not a single ledger sequence"
+  },
+  {
+   "state": "NOT TESTED",
+   "check": "C-1 link consistency over 16 records",
+   "detail": "the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger."
+  },
+  {
+   "state": "PASS",
+   "check": "C-2 self-hash recomputed on 4 record(s)",
+   "detail": "see the caveat in this file's docstring before reusing it"
+  },
+  {
+   "state": "NOT TESTED",
+   "check": "C-3 declared head 5583a949132a6d72...",
+   "detail": "the record it commits to may be one of the withheld ones; the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger."
+  },
+  {
+   "state": "FACT",
+   "check": "C-4 members carrying a record_sha256",
+   "detail": "chained: observations.jsonl | NOT chained: measurements.jsonl, reference_evaluations.jsonl, replay_provenance.jsonl"
+  },
+  {
+   "state": "FACT",
+   "check": "C-4 consequence",
+   "detail": "3 member(s) are covered only by checksums.sha256 and by an external attestation over the whole archive"
+  },
+  {
+   "state": "FACT",
+   "check": "C-5 observation fields: 29 valued, 3 always null",
+   "detail": "always null: cost, error, system_fingerprint"
+  },
+  {
+   "state": "FACT",
+   "check": "C-5 incomplete measurements carrying no reason",
+   "detail": "2 of 2 non-`measured` records have `reason: null`"
+  }
+ ],
+ "counts": {
+  "pass": 1,
+  "fail": 0,
+  "not_tested": 2,
+  "fact": 6
+ }
+}

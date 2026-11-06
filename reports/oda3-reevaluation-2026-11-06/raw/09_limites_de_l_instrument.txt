@@ -1,0 +1,25 @@
+A. LA SONDE LIT-ELLE NOTRE CONTRAT DE COMPLETUDE ?
+   grep 'types_exclus' dans oda3_probe.py : 0
+0 occurrence(s)
+   grep 'enregistrements_exportes' dans oda3_probe.py : 0
+0 occurrence(s)
+   grep 'completude' dans oda3_probe.py : 0
+0 occurrence(s)
+   grep 'contrat_completude' dans oda3_probe.py : 0
+0 occurrence(s)
+   => la sonde ne lit PAS la declaration ajoutee par la PR #10.
+      Elle ne peut donc ni confirmer ni infirmer R-1. Seul
+      tests/test_completude.py l exerce.
+
+B. LES EMPREINTES D ARCHIVES ALTEREES SONT-ELLES REPRODUCTIBLES ?
+   OD-A   IDENTIQUE   5319ac9fe7b464ab / 5319ac9fe7b464ab
+   OD-B   DIFFERENTE  8d037b6cff7d683f / beadcf641ef5cffd
+   OD-C   DIFFERENTE  4cdb6288adef63ce / e6d41a2e58af95e6
+   OD-E   DIFFERENTE  6e766ef32917790e / 4571b43e97d8099e
+   OD-D   IDENTIQUE   e31e12bb7e32c7a3 / e31e12bb7e32c7a3
+
+   Deux passages, meme machine, meme commit, meme archive d entree.
+   Les cas qui RECONSTRUISENT le zip rendent une empreinte differente :
+   `writestr` avec un nom en `str` horodate a l heure courante.
+   Les deux cas stables sont ceux qui ne reconstruisent rien (OD-A
+   ajoute un octet, OD-D ne touche que le .jws).

@@ -1,0 +1,21 @@
+OD-C REJOUE SUR LE PROFIL v2
+========================================================================
+
+OD-C sur le dossier V1 (archive SANS contrat de completude) :
+  verify.py rend 19 PASS, 0 FAIL -- inchange, et c est JUSTE :
+  cette archive ne declare aucun contrat, donc rien a contredire.
+
+FAUSSAIRE NAIF -- il refait les decomptes, pas le contrat
+  observation retiree  : obs-f6441161b5da9315df77b8a7
+  enregistrements oted : 4
+  empreinte            : c33a54c583ecd5a2c3035ae1...
+  verify.py  exit=1   BILAN : 19 PASS, 1 FAIL, 2 NOT TESTED
+  [FAIL      ] completude de l export - le contrat annonce 16 enregistrement(s) exporte(s), les decomptes des membres en totalisent 12
+
+FAUSSAIRE METICULEUX -- il refait AUSSI le contrat
+  observation retiree  : obs-f6441161b5da9315df77b8a7
+  enregistrements oted : 4
+  empreinte            : d576de80f68d1f509ea8df5c...
+  verify.py  exit=0   BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED
+  [PASS      ] completude de l export - 17 enregistrement(s) au registre, 12 exporte(s), 5 retenu(s) : run (1), runner_attempt (4). Les decomptes s addi
+

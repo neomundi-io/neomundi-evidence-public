@@ -1,0 +1,31 @@
+ODA3 re-evaluation -- C-2 settled without Station
+
+The probe reports 16 divergent on v2 and calls it INCONCLUSIVE, which
+its own docstring predicts: its canonicalisation omits `sequence`, and
+`a recomputation that omits it diverges on every record`.
+
+v2 DECLARES its recipe in the manifest. Confronting the records with
+the recipe the archive itself states answers the question the probe
+left open -- without a second implementation of anything.
+
+  --- profil v1 ---
+      recette declaree : NON
+      enregistrements chaines         : 4
+      concordent avec `sequence`      : 0
+      concordent SANS `sequence`      : 4
+
+  --- profil v2 ---
+      recette declaree : oui
+      enregistrements chaines         : 16
+      concordent avec `sequence`      : 16
+      concordent SANS `sequence`      : 0
+
+CONCLUSION
+  v1 hashes WITHOUT `sequence` -- the probe reproduces it, and reported PASS.
+  v2 hashes WITH `sequence` -- Station's field set. The probe, which omits
+  `sequence`, can no longer reproduce it and says so as INCONCLUSIVE.
+
+  The probe's output moved from PASS to NOT TESTED, and that is an
+  IMPROVEMENT, not a regression: v2 moved TOWARDS the instrument's recipe,
+  away from the probe's simplification. Reading the probe's verdict alone
+  would invert the conclusion.

@@ -1,0 +1,18 @@
+ODA3 probe -- examples/dossier-v1/NEOMUNDI_EVIDENCE_V1_DEMO.zip
+archive sha256 : e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6
+
+[FACT      ] C-0 the archive carries 16 records while its manifest declares 4  -- the declared count CONTRADICTS the delivered records by 12; no control in the product compares them
+[FACT      ] C-0 sequence range 1..4, 0 hole(s), 12 duplicate(s)  -- `sequence` restarts per member: it is not a single ledger sequence
+[NOT TESTED] C-1 link consistency over 16 records  -- the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger.
+[PASS      ] C-2 self-hash recomputed on 4 record(s)  -- see the caveat in this file's docstring before reusing it
+[NOT TESTED] C-3 declared head 5583a949132a6d72...  -- the record it commits to may be one of the withheld ones; the archive does not carry one contiguous ledger sequence, so no chain can close inside it. Confront with `station ledger verify` on the source ledger.
+[FACT      ] C-4 members carrying a record_sha256  -- chained: observations.jsonl | NOT chained: measurements.jsonl, reference_evaluations.jsonl, replay_provenance.jsonl
+[FACT      ] C-4 consequence  -- 3 member(s) are covered only by checksums.sha256 and by an external attestation over the whole archive
+[FACT      ] C-5 observation fields: 29 valued, 3 always null  -- always null: cost, error, system_fingerprint
+[FACT      ] C-5 incomplete measurements carrying no reason  -- 2 of 2 non-`measured` records have `reason: null`
+
+ODA3 PROBE : 1 PASS, 0 FAIL, 2 NOT TESTED, 6 FACT
+
+What this probe does NOT establish: the origin of the archive, the
+time of any event, the correctness of any measured signal, or that
+any execution took place. It reads an archive and nothing else.
