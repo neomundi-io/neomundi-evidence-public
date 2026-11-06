@@ -52,14 +52,22 @@ Aucune n'a besoin du réseau. Aucune n'écrit dans le dossier.
 python ../../verify.py NEOMUNDI_EVIDENCE_V1_DEMO.zip --corpus corpus
 ```
 
-**Attendu : `BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED`**, sur 21 lignes.
+**Attendu : `BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED`**, sur 22 lignes.
 
 Aucune dépendance : `verify.py` n'importe que la bibliothèque standard. Pour
 vous en convaincre, bloquez tout et relancez — le bilan est identique.
 
-Les 2 `NOT TESTED` sont le chaînage du registre et l'origine de l'archive :
-deux choses qu'aucune vérification locale ne peut faire, et qui portent leur
-raison en clair.
+Les 3 `NOT TESTED` sont le chaînage du registre, l'origine de l'archive, et —
+nouveau depuis le 6 novembre — la **complétude de l'export**. Aucun n'est un
+défaut de ce dossier : chacun nomme une chose qu'aucune vérification locale
+n'établit, et le troisième dit quelque chose que ce dossier ne déclare
+effectivement pas.
+
+Cette troisième ligne répond au constat central d'une évaluation externe :
+une archive peut être intérieurement parfaite et n'exporter qu'une partie de
+son registre. Ce dossier précède le contrat qui le déclarerait, donc la ligne
+vaut `NOT TESTED` — ni `PASS`, ni `FAIL` non plus, parce que le manque est au
+producteur de le combler, pas à vous.
 
 ### 2 — Attestation Ed25519
 
@@ -175,8 +183,14 @@ nous déclarions indétectable jusqu'au 6 novembre.
 ## Reproduire le dossier entier
 
 ```sh
-python ../../tests/make_fixture.py <repertoire>
+python ../../tests/make_fixture.py <repertoire> --profile v1
 ```
+
+**`--profile v1` est obligatoire.** Le défaut du générateur est désormais
+`v2`, un profil fidèle qui chaîne les quatre membres, numérote `sequence` de
+façon monotone et déclare son contrat de complétude. `v2` est une archive
+**différente** — et ce dossier est signé et horodaté sur les octets de `v1`,
+donc c'est `v1` qui le reproduit.
 
 L'archive est **déterministe à l'octet** : deux exécutions rendent la même
 empreinte. L'attestation, elle, ne peut pas être reproduite — sa clé privée a

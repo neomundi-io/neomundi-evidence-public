@@ -59,7 +59,7 @@ python verify.py NEOMUNDI_EVIDENCE_DEMO_V0.1.zip \
   --corpus <freeze>/GROUNDED-S1/entrees/corpus
 ```
 
-Expected: `19 PASS, 0 FAIL, 2 NOT TESTED`.
+Expected: `19 PASS, 0 FAIL, 2 NOT TESTED`. *(measured before the completeness control existed; any archive predating that contract now shows one more `NOT TESTED` — see [ODA3 consolidation](ODA3_CONSOLIDATION.md))*
 
 The two checks not performed are named with their reason: the JCS chaining (out
 of scope for an independent verifier, by choice) and the archive's origin (out

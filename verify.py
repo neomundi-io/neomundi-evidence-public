@@ -680,13 +680,106 @@ def controle_chaine(bilan: Bilan, manifeste: dict[str, object]) -> None:
         )
         return
     tetes = ", ".join(str(r.get("empreinte_de_tete"))[:16] + "..." for r in declares)
-    verifiees = {r.get("chaine_verifiee", r.get("chaine_verifiee_par_cet_outil")) for r in declares}
+    # R-8 : `sorted(map(str, ...))` imprimait un conteneur Python -- << L
+    # archive declare ['True'] >>. Un auditeur ne peut rien en faire, et la
+    # ligne se lit comme un defaut de l outil. On dit la valeur.
+    etats = [r.get("chaine_verifiee", r.get("chaine_verifiee_par_cet_outil"))
+             for r in declares]
+    if all(e is True for e in etats):
+        dit = "chaine verifiee par son instrument"
+    elif all(e is False for e in etats):
+        dit = "chaine NON verifiee par son instrument"
+    elif all(e is None for e in etats):
+        dit = "rien sur la verification de sa chaine"
+    else:
+        dit = "des etats differents selon le registre (%s)" % ", ".join(
+            "verifiee" if e is True else ("non verifiee" if e is False else "non dit")
+            for e in etats)
     bilan.dire(
         NOT_TESTED,
         "chainage JCS de %d registre(s) d origine" % len(declares),
         "hors de portee : le recalculer ici serait une seconde implementation du "
-        "registre. L archive declare %s et les empreintes de tete %s. A confronter avec : "
-        "station ledger verify --path <registre>" % (sorted(map(str, verifiees)), tetes),
+        "registre. L archive declare %s, et les empreintes de tete %s. A confronter "
+        "avec : station ledger verify --path <registre>" % (dit, tetes),
+    )
+
+
+def controle_completude(
+    bilan: Bilan, archive: zipfile.ZipFile, noms: list[str], manifeste: dict[str, object]
+) -> None:
+    """L archive dit-elle ce que son registre portait, et ce qu elle n exporte pas ?
+
+    C est la question que l integrite ne pose pas. Une archive peut etre
+    parfaitement coherente avec elle-meme et ne livrer qu une PARTIE de son
+    registre -- l evaluation ODA3 du 6 novembre a mesure 151 enregistrements
+    de 6 types au registre pour 120 de 4 types a l export, et un manifeste
+    annoncant 151. Les 31 retenus n etaient nommes nulle part.
+
+    Le contrat verifie ici :
+
+        enregistrements = enregistrements_exportes + somme(types_exclus)
+        enregistrements_exportes = somme(decomptes des membres exportes)
+
+    Une archive qui ne declare pas ce contrat rend `NOT TESTED`. Elle n est
+    pas fautive -- le contrat est neuf -- mais sa completude n est pas
+    etablie, et le dire est tout l objet de cette ligne.
+    """
+    registre = manifeste.get("registre")
+    registre = registre if isinstance(registre, dict) else {}
+    total = registre.get("enregistrements")
+    exportes = registre.get("enregistrements_exportes")
+    exclus = registre.get("types_exclus")
+    exclus = exclus if isinstance(exclus, dict) else None
+
+    if not isinstance(exportes, int) or exclus is None:
+        bilan.dire(
+            NOT_TESTED,
+            "completude de l export",
+            "l archive ne declare pas de contrat de completude : il lui manque "
+            "`registre.enregistrements_exportes` et `registre.types_exclus`. Son "
+            "integrite interne peut etre entiere et son export partiel -- une chaine "
+            "valide ne dit rien de ce qui n a pas ete exporte. Non marque requis : "
+            "c est au PRODUCTEUR de l archive de declarer ce contrat, pas a "
+            "l appelant de le fournir.",
+        )
+        return
+
+    # Les decomptes des membres effectivement livres.
+    decomptes = manifeste.get("decomptes")
+    decomptes = decomptes if isinstance(decomptes, dict) else {}
+    livres = {
+        "observations.jsonl": decomptes.get("observations"),
+        "measurements.jsonl": decomptes.get("mesures"),
+        "reference_evaluations.jsonl": decomptes.get("evaluations"),
+        "replay_provenance.jsonl": decomptes.get("provenances_de_rejeu"),
+    }
+    somme_livres = sum(v for nom, v in livres.items()
+                       if nom in noms and isinstance(v, int))
+    somme_exclus = sum(v for v in exclus.values() if isinstance(v, int))
+
+    ecarts = []
+    if isinstance(total, int) and total != exportes + somme_exclus:
+        ecarts.append(
+            "le registre annonce %d enregistrement(s), or %d exporte(s) + %d retenu(s) "
+            "font %d" % (total, exportes, somme_exclus, exportes + somme_exclus))
+    if exportes != somme_livres:
+        ecarts.append(
+            "le contrat annonce %d enregistrement(s) exporte(s), les decomptes des "
+            "membres en totalisent %d" % (exportes, somme_livres))
+
+    if ecarts:
+        bilan.dire(FAIL, "completude de l export", " ; ".join(ecarts))
+        return
+
+    nommes = ", ".join("%s (%d)" % (t, n) for t, n in sorted(exclus.items())) or "aucun"
+    bilan.dire(
+        PASS,
+        "completude de l export",
+        "%d enregistrement(s) au registre, %d exporte(s), %d retenu(s) : %s. Les "
+        "decomptes s additionnent. Ce qui est retenu est NOMME, donc l absence est "
+        "une exclusion declaree et non un manque silencieux."
+        % (total if isinstance(total, int) else exportes + somme_exclus,
+           exportes, somme_exclus, nommes),
     )
 
 
@@ -792,6 +885,8 @@ def deroule(bilan: Bilan, arguments: argparse.Namespace) -> None:
         execute(bilan, "neutralisation des formules CSV", controle_csv, archive, noms)
         execute(bilan, "absence de secrets et de chemins", controle_confidentialite, archive, noms)
         execute(bilan, "empreintes des entrees", controle_entrees, archive, noms, arguments.corpus)
+        execute(bilan, "completude de l export", controle_completude,
+                archive, noms, manifeste)
         execute(bilan, "chainage du registre", controle_chaine, manifeste)
         execute(bilan, "origine de l archive", controle_origine)
 

@@ -59,7 +59,7 @@ re-reads the archive it has just written. And that hash must be kept
 
 ### Step 3 — it verifies without NeoMundi · t+4 s · *60 s of speech*
 
-→ **`19 PASS, 0 FAIL, 2 NOT TESTED`**
+→ **`19 PASS, 0 FAIL, 2 NOT TESTED`** *(measured before the completeness control existed; any archive predating that contract now shows one more `NOT TESTED` — see [ODA3 consolidation](ODA3_CONSOLIDATION.md))*
 
 **To say:** `verify.py` has no dependency, emits no network call, writes
 nothing. It is meant to be **read** before being run. The two `NOT TESTED` are

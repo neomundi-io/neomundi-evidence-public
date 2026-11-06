@@ -142,6 +142,13 @@ ANCRAGE_PAR_ROLE = {
     "response": "response_sha256",
     "prompt": "prompt_sha256",
     "request": "request_sha256",
+    # ATTENTION -- R-7 : dans un registre REEL, `config_snapshot_sha256`
+    # porte l empreinte de la CAMPAGNE, pas celle d un fichier de
+    # configuration. Son nom le laisse croire, et c est un piege : offrir un
+    # fichier de configuration pour ce role rendrait MISMATCHED, et un
+    # auditeur en conclurait une alteration la ou il n y a qu un nom mal
+    # choisi. Le champ n est pas renomme -- cela casserait les archives
+    # existantes -- il est DOCUMENTE, ici et dans `docs/BINDING.md`.
     "config_snapshot": "config_snapshot_sha256",
     "recording": "recording_sha256",
     "bundle": "bundle_sha256",

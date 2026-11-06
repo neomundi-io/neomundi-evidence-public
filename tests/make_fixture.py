@@ -24,12 +24,35 @@ les reponses disent elles-memes ce qu elles sont. Croiser son
 `extracted_answer` et son `status` ne revele rien, parce qu il n y a rien
 derriere.
 
-DETERMINISME
-------------
+DETERMINISME, ET PORTABILITE -- DEUX CHOSES DIFFERENTES
+-------------------------------------------------------
 
 Horodatages figes, `ZIP_STORED`, membres tries, `date_time` constant : deux
 executions rendent la MEME archive a l octet. Une empreinte instable
 ferait echouer la CI pour une raison qui n est pas un defaut du produit.
+
+Mais le determinisme n est pas la portabilite, et la confusion a coute une
+inreproductibilite silencieuse jusqu au 6 novembre. `zipfile.ZipInfo` met
+`create_system` a 0 sous Windows et a 3 ailleurs, et ce champ est ecrit dans
+le repertoire central : la MEME commande rendait donc deux archives
+differentes selon le systeme. L archive du dossier de revue, produite sous
+Windows, etait INREPRODUCTIBLE sous Linux -- alors que son guide promet le
+contraire a un relecteur.
+
+La CI ne l avait jamais vu : elle comparait deux generations SUR LA MEME
+MACHINE, ce qui eprouve le determinisme et pas la portabilite. C est le
+cas 1 de `test_completude.py`, qui confronte l empreinte a une CONSTANTE,
+qui l a fait apparaitre.
+
+`create_system` est desormais epingle a 0. Voir `_entree`, plus bas.
+
+LES DEUX PROFILS
+----------------
+
+`v2` est le defaut : le profil FIDELE, dont la forme suit celle d un export
+reel. `v1` reproduit l archive historique a l octet, parce qu une
+attestation Ed25519 et une ancre Bitcoin portent sur son empreinte --
+`--profile v1` existe pour que cette chaine de preuve reste verifiable.
 
 CE QUE LA FIXTURE COUVRE
 ------------------------
@@ -96,7 +119,31 @@ def jcs(obj: object) -> bytes:
                       ensure_ascii=False).encode("utf-8")
 
 
-def construire(sortie: Path) -> tuple[Path, Path]:
+#: Les causes par signal, quand un signal n est pas mesure. En `v1` le
+#: champ `reason` valait `null` pour tout le monde -- un relecteur en
+#: concluait qu une mesure degradee ne dit pas pourquoi, ce qui est faux
+#: d un export reel.
+#:
+#: Les causes sont celles qu une mesure reelle porte : `coherence_score` et
+#: `factual_hallucination_score` ont ete observees telles quelles ; les deux
+#: signaux du meme juge partagent sa cause.
+CAUSES_PAR_SIGNAL = {
+    "coherence_score": "coherence_service_unavailable",
+    "semantic_risk": "moderation_timeout",
+    "stability_score": "runtime_engine_unavailable",
+    "factual_hallucination_score": "hallucination_judge_unavailable",
+    "semantic_instability_score": "hallucination_judge_unavailable",
+}
+
+# Un signal ajoute a `SIGNAUX` sans sa cause doit echouer A L IMPORT, pas au
+# milieu d une generation : le premier essai de ce profil est tombe sur un
+# `KeyError` apres avoir deja ecrit des fichiers.
+assert set(CAUSES_PAR_SIGNAL) == set(SIGNAUX), (
+    "CAUSES_PAR_SIGNAL ne couvre pas SIGNAUX : %s"
+    % sorted(set(SIGNAUX) ^ set(CAUSES_PAR_SIGNAL)))
+
+
+def construire(sortie: Path, profil: str = "v2") -> tuple[Path, Path]:
     sortie.mkdir(parents=True, exist_ok=True)
     corpus = sortie / "corpus"
     (corpus / "responses").mkdir(parents=True, exist_ok=True)
@@ -198,7 +245,12 @@ def construire(sortie: Path) -> tuple[Path, Path]:
             "measurement_version": "3.3.1",
             "neomundi_measurement_id": None,
             "observation_id": identifiant,
-            "reason": None,
+            # Ecart 2 d ODA3 : en `v1` ce champ valait `null` partout, et un
+            # relecteur en concluait qu une mesure degradee ne dit pas
+            # pourquoi. Un export reel porte la cause PAR SIGNAL.
+            "reason": (None if profil == "v1" else {
+                nom: CAUSES_PAR_SIGNAL[nom]
+                for nom, valeur in mesures_signaux.items() if valeur is None}),
             "signals": mesures_signaux,
             "status": modele["statut"],
         }, "integrity": {"record_id": "mes-" + identifiant, "recorded_at": INSTANT},
@@ -232,6 +284,30 @@ def construire(sortie: Path) -> tuple[Path, Path]:
         }, "integrity": {"record_id": "prov-" + identifiant, "recorded_at": INSTANT},
             "sequence": index + 1})
 
+    # --- les enregistrements RETENUS a l export ----------------------------
+    # Un registre reel porte six types ; l export n en livre que quatre.
+    # Sans ce decalage ici, R-1 et R-2 ne seraient pas eprouvables : on ne
+    # teste pas un controle de completude sur un objet complet.
+    retenus: list[dict[str, object]] = []
+    if profil != "v1":
+        retenus.append({"payload": {
+            "run_id": "run-ci-fixture",
+            "started_at": INSTANT,
+            "finished_at": INSTANT,
+            "regime": "synthetic",
+        }, "integrity": {"record_id": "run-ci-fixture", "recorded_at": INSTANT},
+            "record_type": "run"})
+        for index, modele in enumerate(OBSERVATIONS):
+            retenus.append({"payload": {
+                "attempt_id": "att-%s-%d" % (modele["suffixe"], index),
+                "observation_id": "obs-" + sha256(
+                    ("fixture-%s" % modele["suffixe"]).encode()),
+                "attempted_at": INSTANT,
+                "outcome": "ok",
+            }, "integrity": {"record_id": "att-%s-%d" % (modele["suffixe"], index),
+                             "recorded_at": INSTANT},
+                "record_type": "runner_attempt"})
+
     # --- le manifeste du corpus, et son empreinte de paquet ----------------
     # Les quatre champs que `verify.py` reinjecte dans l empreinte de paquet
     # -- bundle_id, regime, origin, recordings -- doivent etre portes ici,
@@ -261,6 +337,53 @@ def construire(sortie: Path) -> tuple[Path, Path]:
     }))
     for p in provenances:
         p["payload"]["bundle_sha256"] = bundle
+
+    # --- LE CHAINAGE, en une seule passe -----------------------------------
+    # Posee ICI, et non dans la boucle : `bundle_sha256` des provenances
+    # n est connu qu apres le gel du corpus, et chainer avant aurait hache
+    # un `None`. Un registre reel n a pas ce probleme ; notre generateur si.
+    #
+    # Ecarts 1, 3 et 5 d ODA3 traites ensemble :
+    #   1. les QUATRE membres sont chaines, plus les retenus ;
+    #   3. `sequence` est monotone sur tout le registre, 0 vers N ;
+    #   5. `record_sha256` porte le jeu de champs de Station, `sequence`
+    #      compris.
+    if profil != "v1":
+        # L ordre du registre : une tentative precede son observation, et
+        # le `run` ouvre la campagne. C est l ordre d un registre reel.
+        par_observation = {o["payload"]["observation_id"]: o for o in observations}
+        ordre: list[dict[str, object]] = []
+        for r in retenus:
+            if r["record_type"] == "run":
+                ordre.append(r)
+        for index, modele in enumerate(OBSERVATIONS):
+            att = [r for r in retenus
+                   if r["record_type"] == "runner_attempt"
+                   and r["payload"]["attempt_id"].endswith("-%d" % index)]
+            ordre += att
+            ident = "obs-" + sha256(("fixture-%s" % modele["suffixe"]).encode())
+            ordre.append(par_observation[ident])
+            ordre += [m for m in mesures if m["payload"]["observation_id"] == ident]
+            ordre += [e for e in evaluations if e["payload"]["observation_id"] == ident]
+            ordre += [v for v in provenances if v["payload"]["observation_id"] == ident]
+
+        precedent = None
+        for rang, enregistrement in enumerate(ordre):
+            integrite = enregistrement["integrity"]
+            integrite["prev_record_sha256"] = precedent
+            integrite.pop("record_sha256", None)
+            enregistrement["sequence"] = rang
+            # La recette de Station : `sequence` entre dans l empreinte.
+            # La canonicalisation reste `json.dumps(sort_keys)` et c est
+            # DECLARE au manifeste -- reimplementer RFC 8785 ici serait la
+            # seconde implementation du registre que ce produit refuse.
+            integrite["record_sha256"] = sha256(jcs({
+                "sequence": rang,
+                "payload": enregistrement["payload"],
+                "integrity": {k: v for k, v in integrite.items()
+                              if k != "record_sha256"},
+            }))
+            precedent = integrite["record_sha256"]
 
     # --- les membres de l archive ------------------------------------------
     membres: dict[str, bytes] = {
@@ -314,8 +437,43 @@ def construire(sortie: Path) -> tuple[Path, Path]:
             "versions_de_mesure": ["3.3.1"],
         },
         "regimes_d_execution": ["synthetic"],
-        "registre": {"chaine_verifiee": True, "empreinte_de_tete": precedent,
-                     "enregistrements": len(observations), "nom": "ledger.jsonl"},
+        "registre": ({"chaine_verifiee": True, "empreinte_de_tete": precedent,
+                      "enregistrements": len(observations), "nom": "ledger.jsonl"}
+                     if profil == "v1" else {
+            "chaine_verifiee": True,
+            "empreinte_de_tete": precedent,
+            "nom": "ledger.jsonl",
+            # Ecart 4 d ODA3 : `enregistrements` est le total du registre
+            # SOURCE. En `v1` il valait le nombre d observations -- 4 pour
+            # 16 enregistrements livres -- ce qui se lisait comme un
+            # decompte d export faux.
+            "enregistrements": len(observations) + len(mesures)
+                               + len(evaluations) + len(provenances) + len(retenus),
+            "enregistrements_exportes": len(observations) + len(mesures)
+                                        + len(evaluations) + len(provenances),
+            # R-1 : les types RETENUS a l export sont nommes, avec leur
+            # decompte. Une exclusion tacite n est pas une exclusion.
+            "types_exclus": {
+                "run": sum(1 for r in retenus if r["record_type"] == "run"),
+                "runner_attempt": sum(1 for r in retenus
+                                      if r["record_type"] == "runner_attempt"),
+            },
+            "types_exportes": ["observation", "measurement",
+                               "reference_evaluation", "replay_provenance"],
+            # Ecart 5 : la recette est DECLAREE, parce qu elle ne coincide
+            # pas avec celle de Station sur la canonicalisation.
+            "recette_record_sha256": (
+                "sha256(json.dumps({sequence, payload, integrity moins "
+                "record_sha256}, sort_keys=True, separators=(\",\",\":\"), "
+                "ensure_ascii=False)) -- MEME jeu de champs que Station, "
+                "canonicalisation NON RFC 8785 : les deux coincident sur le "
+                "domaine de valeurs de cette fixture, pas en general."),
+            # Ecart 6 : le remplissage est declare, pas deguise.
+            "remplissage": {
+                "code_commit": "valeur de remplissage ; aucune revision reelle",
+                "config_snapshot_sha256": "valeur de remplissage",
+            },
+        }),
         "runs": [{"run_id": "run-ci-fixture"}],
         "schema": SCHEMA,
     }
@@ -343,9 +501,30 @@ def construire(sortie: Path) -> tuple[Path, Path]:
         "%s  %s\n" % (sha256(membres[n]), n) for n in couverts).encode("utf-8")
 
     archive = sortie / "NEOMUNDI_EVIDENCE_CI_FIXTURE.zip"
+    # `create_system` est le SEUL champ de l en-tete ZIP qui dependait de la
+    # plateforme : `zipfile.ZipInfo` le met a 0 sous Windows et a 3 ailleurs,
+    # et il est ecrit dans le repertoire central. La meme commande rendait
+    # donc deux archives differentes, et l archive du dossier de revue
+    # -- produite sous Windows, donc `create_system = 0` -- etait
+    # INREPRODUCTIBLE sous Linux.
+    #
+    # Trouve le 6 novembre par la CI, sur le cas 1 de `test_completude.py` :
+    # `9fcaf840...` au lieu de `e31e12bb...`. Rien ne l avait vu avant, parce
+    # que la CI ne comparait que deux generations SUR LA MEME MACHINE -- ce
+    # qui eprouve le determinisme, pas la portabilite.
+    #
+    # On l epingle a 0 : la valeur de l archive signee, donc son empreinte ne
+    # bouge pas, et un relecteur sous Linux la reproduit enfin. Le guide de
+    # l auditeur promet cette reproduction ; elle n etait vraie que pour
+    # nous.
+    def _entree(nom: str) -> zipfile.ZipInfo:
+        info = zipfile.ZipInfo(nom, date_time=DATE_ZIP)
+        info.create_system = 0
+        return info
+
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
         for nom in sorted(membres):
-            z.writestr(zipfile.ZipInfo(nom, date_time=DATE_ZIP), membres[nom])
+            z.writestr(_entree(nom), membres[nom])
 
     # --- de quoi eprouver la LIAISON ---------------------------------------
     # La suite de liaison a besoin d un repertoire d artefacts a part : le
@@ -369,9 +548,22 @@ def construire(sortie: Path) -> tuple[Path, Path]:
                 "binding": "binding",
                 "first_observation_id": premiere["observation_id"],
                 "first_recording_path": nom_premier,
+                # Les lignes de base dependent du PROFIL : `v2` declare son
+                # contrat de completude, donc ce controle y passe PASS ; `v1`
+                # ne le declare pas, donc il y reste NOT TESTED.
+                #
+                # Les quatre valeurs sont ecrites ici, et nulle part ailleurs.
+                # La CI les lit depuis ce descripteur -- une seule source de
+                # verite, aucun nombre recopie a la main. C est ce qui a
+                # attrape l oubli du 6 novembre : `verify_avec_corpus` avait
+                # ete mis a jour, `verify_sans_corpus` non.
                 "attendu": {
-                    "verify_avec_corpus": "BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED",
-                    "verify_sans_corpus": "BILAN : 17 PASS, 0 FAIL, 3 NOT TESTED",
+                    "verify_avec_corpus": (
+                        "BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED" if profil != "v1"
+                        else "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED"),
+                    "verify_sans_corpus": (
+                        "BILAN : 18 PASS, 0 FAIL, 3 NOT TESTED" if profil != "v1"
+                        else "BILAN : 17 PASS, 0 FAIL, 4 NOT TESTED"),
                 },
             },
             ensure_ascii=False,
@@ -385,9 +577,28 @@ def construire(sortie: Path) -> tuple[Path, Path]:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("emploi : python tests/make_fixture.py <repertoire_de_sortie>")
+        print("emploi : python tests/make_fixture.py <repertoire> "
+              "[--profile v1|v2]")
+        print()
+        print("  v2 (defaut) : le profil FIDELE. Les quatre membres sont")
+        print("                chaines, `sequence` est monotone sur tout le")
+        print("                registre, une mesure incomplete porte sa cause")
+        print("                par signal, et le registre source porte six")
+        print("                types dont deux sont RETENUS a l export.")
+        print("  v1          : l archive HISTORIQUE, octet pour octet. Le")
+        print("                dossier de revue V1 est signe et horodate sur")
+        print("                son empreinte : ce profil existe pour que")
+        print("                cette chaine reste verifiable.")
         return 2
-    archive, corpus = construire(Path(sys.argv[1]).resolve())
+    profil = "v2"
+    if "--profile" in sys.argv:
+        rang = sys.argv.index("--profile")
+        if rang + 1 >= len(sys.argv) or sys.argv[rang + 1] not in ("v1", "v2"):
+            print("[FAIL] --profile attend `v1` ou `v2`")
+            return 2
+        profil = sys.argv[rang + 1]
+    archive, corpus = construire(Path(sys.argv[1]).resolve(), profil)
+    print("profil  : %s" % profil)
     print("archive : %s" % archive)
     print("  empreinte : %s" % sha256(archive.read_bytes()))
     print("  taille    : %d octets" % archive.stat().st_size)

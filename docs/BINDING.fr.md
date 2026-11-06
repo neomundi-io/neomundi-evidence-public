@@ -86,6 +86,24 @@ l'enregistrement, et le contrôle rend `NOT TESTED` — jamais `PASS`.
 Bibliothèque standard seule. Aucun réseau. Aucune écriture hors de la sortie
 demandée.
 
+### Un rôle dont le nom trompe — `config_snapshot`
+
+Dans un registre **réel**, `config_snapshot_sha256` porte l'empreinte de la
+**campagne**, et non celle d'un fichier de configuration. Le nom dit le
+contraire, et c'est un piège qu'il faut nommer : offrir un fichier de
+configuration pour ce rôle fait rendre `MISMATCHED`, d'où un relecteur
+conclurait que l'artefact a été altéré — alors que seul le champ est mal
+nommé.
+
+Le champ n'est **pas** renommé. Le renommer invaliderait toutes les archives
+qui le portent déjà, et les archives sont la preuve. Il est documenté à la
+place — ici, et par un commentaire à la table de correspondance dans
+`bind.py`, là où quelqu'un rencontrerait le piège.
+
+Soulevé comme recommandation **R-7** par l'évaluation externe du 6 novembre,
+qui a mesuré que `campaign_sha256` et `config_snapshot_sha256` portent la
+**même** valeur dans un registre réel.
+
 ---
 
 ## Ce que le vérificateur contrôle

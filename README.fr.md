@@ -93,9 +93,16 @@ Deux corpus, deux objets. Aucun ne remplace l'autre.
 | Régime d'exécution | `synthetic` — n'observe aucun opérateur réel | `live` — sept fournisseurs nommés |
 | Mesures | 15 `measured`, 8 `degraded`, **7 `not_measured`** | 208, toutes `measured` |
 | Modèles nommés | non — elle n'observe rien de réel | **oui** — voir le tableau de la [démonstration B](docs/MED_DEMO.fr.md) |
-| Vérification | **19 PASS, 0 FAIL, 2 NOT TESTED** | **10 PASS, 0 FAIL, 8 NOT TESTED** |
+| Vérification | **19 PASS, 0 FAIL, 2 NOT TESTED** †| **10 PASS, 0 FAIL, 8 NOT TESTED** †|
 | Suite de falsification | **s'applique** — 10/10 détectées | ne s'applique pas, et dit pourquoi |
 | Documentation | [Démonstration A](docs/DEMO.fr.md) | [Démonstration B](docs/MED_DEMO.fr.md) |
+
+† Mesuré le 5 novembre, **avant** l'existence du contrôle de complétude.
+Toute archive antérieure à ce contrat porte désormais un `NOT TESTED` de
+plus — le chiffre n'est pas réénoncé ici parce que ces deux archives ne sont
+pas dans ce dépôt et que nous ne les avons pas remesurées. Voir
+[consolidation ODA3](docs/ODA3_CONSOLIDATION.fr.md).
+
 
 **Pourquoi les deux.** Un corpus synthétique peut porter des mesures qui n'ont
 *pas* été faites — c'est ainsi que « une absence reste une absence » se
@@ -279,6 +286,7 @@ question se résolve chez l'éditeur du jeu de données.
 | [`docs/MED_DEMO.fr.md`](docs/MED_DEMO.fr.md) | Démonstration B — l'expérimentation médicale, son jeu de données, ses modèles et ses limites |
 | [`docs/TIMESTAMPING.fr.md`](docs/TIMESTAMPING.fr.md) | horodatage indépendant par OpenTimestamps : ce qu'il prouve, et pourquoi `PENDING` ne prouve aucune date |
 | [`docs/INTEGRATION.fr.md`](docs/INTEGRATION.fr.md) | intégrer Evidence : codes de sortie, `--strict`, rapports JSON, et CI |
+| [`docs/ODA3_CONSOLIDATION.fr.md`](docs/ODA3_CONSOLIDATION.fr.md) | la consolidation ODA3 : huit recommandations traitées, ce qui reste ouvert, et les cinq distinctions qu'elle protège |
 | [`docs/V1_CLOSURE_PLAN.fr.md`](docs/V1_CLOSURE_PLAN.fr.md) | le plan de clôture des conditions restantes, l'ordre de réalisation et les verdicts |
 | [`docs/B1_EXPERIMENTAL_SIGNING_DECISION.fr.md`](docs/B1_EXPERIMENTAL_SIGNING_DECISION.fr.md) | B-1 — la politique de signature expérimentale, en fiche de décision à approuver |
 | [`docs/B2_KEY_CUSTODY_AND_ACTIVATION.fr.md`](docs/B2_KEY_CUSTODY_AND_ACTIVATION.fr.md) | B-2 — garde et activation de la clé Ed25519 réelle, et pourquoi elle est distincte de RGC |

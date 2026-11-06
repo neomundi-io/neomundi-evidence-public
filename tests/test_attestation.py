@@ -426,7 +426,7 @@ def cas(banc: Banc) -> list[tuple[str, str, bool, str]]:
                           "--corpus", str(banc.corpus)] if banc.corpus
                          else [sys.executable, str(VERIFY), str(banc.archive)])
     bilan_g = next((l for l in s_g.splitlines() if l.startswith("BILAN")), "")
-    attendu_g = "BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED" if banc.corpus else None
+    attendu_g = "BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED" if banc.corpus else None
     pose("10", "non-regression de verify.py sur GROUNDED-S1",
          bilan_g == attendu_g if attendu_g else "0 FAIL" in bilan_g,
          bilan_g or "aucun bilan")
