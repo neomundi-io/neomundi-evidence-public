@@ -49,12 +49,86 @@ from pathlib import Path
 
 import canonical
 
+
+# ---------------------------------------------------------------------------
+# La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
+# cote, cet outil tourne et rend exactement les memes verdicts, en francais.
+# Les controles ne doivent jamais dependre de la couche de traduction.
+# ---------------------------------------------------------------------------
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+#: La langue d affichage, posee une fois par `main`. Une cellule plutot
+#: qu un parametre : il y a 19 appels a `dis` dans ce fichier, et les
+#: renommer se relit, leur ajouter un argument non.
+_LANGUE = [i18n.FR]
+
+
+def dis(*morceaux: object) -> None:
+    """Imprime de la prose, dans la langue courante.
+
+    Seul le FORMAT est traduit. Les arguments -- empreintes, decomptes,
+    noms de fichiers, etiquettes venues d un recu tiers -- traversent
+    VERBATIM : les traduire les abimerait.
+    """
+    if not morceaux:
+        print()
+        return
+    premier = morceaux[0]
+    if isinstance(premier, str):
+        # DEUX formes d appel coexistent dans ce depot :
+        #   dis("x : %s", valeur)      -> `premier` est un FORMAT
+        #   dis("x : %s" % valeur)     -> `premier` est DEJA rendu
+        # La premiere se traduit par recherche exacte du format ; la
+        # seconde par le moteur a motifs, qui en extrait les arguments.
+        # Sans ce repli, toute la prose construite par `%` sortait en
+        # francais -- et c est la forme majoritaire ici.
+        pose = i18n.traduire_format(premier, _LANGUE[0])
+        if pose == premier:
+            pose = i18n.traduire(premier, _LANGUE[0])
+        premier = pose
+    print(premier, *morceaux[1:])
+
+
+def _pose_langue(arguments: "argparse.Namespace") -> None:
+    """Pose la langue depuis les arguments, si l outil en expose une."""
+    _LANGUE[0] = getattr(arguments, "lang", i18n.FR) or i18n.FR
+
+#: `--lang` est declare sur un analyseur PARENT, pour qu il s ecrive apres
+#: la sous-commande -- `verify <fichier> --lang en` -- qui est la facon dont
+#: on l ecrit naturellement.
+def _parent_langue() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    return parent
+
 try:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ed25519
 except ImportError as erreur:  # pragma: no cover - environnement sans crypto
-    print("[FAIL] `cryptography` est requis pour SIGNER : pip install cryptography")
-    print("       (le verificateur, lui, s en passe et rend NOT TESTED)")
+    dis("[FAIL] `cryptography` est requis pour SIGNER : pip install cryptography")
+    dis("       (le verificateur, lui, s en passe et rend NOT TESTED)")
     raise SystemExit(2) from erreur
 
 SCHEMA_ATTESTATION = "neomundi.evidence.attestation/1"
@@ -133,11 +207,11 @@ def genkey(arguments: argparse.Namespace) -> int:
     except OSError:
         # Windows n honore pas toujours le mode POSIX ; ce n est pas une
         # raison d echouer, mais c est une raison de le dire.
-        print("[note] mode 0600 non applique par ce systeme de fichiers")
+        dis("[note] mode 0600 non applique par ce systeme de fichiers")
 
-    print("cle privee ecrite : %s" % arguments.out)
-    print("  kid             : %s" % arguments.kid)
-    print("  NE JAMAIS la commiter, ni la placer dans une archive ou un exemple.")
+    dis("cle privee ecrite : %s" % arguments.out)
+    dis("  kid             : %s" % arguments.kid)
+    dis("  NE JAMAIS la commiter, ni la placer dans une archive ou un exemple.")
 
     if arguments.trust_store_out:
         magasin = {
@@ -215,6 +289,9 @@ def genkey(arguments: argparse.Namespace) -> int:
                     "notes": arguments.key_notes,
                 }
             ],
+            # Monotone, et EXIGE : c est le nombre publie sur le
+            # second canal, a cote de l empreinte du magasin.
+            "store_version": 1,
             "changes": [
                 {
                     "at_declared": arguments.valid_from,
@@ -233,8 +310,8 @@ def genkey(arguments: argparse.Namespace) -> int:
         arguments.trust_store_out.write_bytes(
             (json.dumps(magasin, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
         )
-        print("magasin de confiance ecrit : %s" % arguments.trust_store_out)
-        print("  cle publique (x)         : %s" % b64u(brut_public))
+        dis("magasin de confiance ecrit : %s" % arguments.trust_store_out)
+        dis("  cle publique (x)         : %s" % b64u(brut_public))
     return 0
 
 
@@ -351,17 +428,17 @@ def attest(arguments: argparse.Namespace) -> int:
     # empreinte -- le defaut a ete constate, pas suppose.
     arguments.out.write_bytes((jeton + "\n").encode("ascii"))
 
-    print("attestation ecrite : %s" % arguments.out)
-    print("  sujet            : %s" % sujet["bundle_name"])
-    print("  bundle_sha256    : %s" % sujet["bundle_sha256"])
-    print("  nature           : %s" % arguments.kind)
-    print("  cle              : %s" % kid)
-    print("  gel du sujet     : %s (conserve)" % sujet.get("subject_frozen_at_declared"))
-    print()
-    print("L archive n a pas ete touchee : l attestation est DETACHEE.")
-    print("`attested_at_declared` est une date DECLAREE, pas un horodatage")
-    print("independant. Verifier avec :")
-    print("  python verify_attestation.py %s --archive %s --trust-store <magasin>"
+    dis("attestation ecrite : %s" % arguments.out)
+    dis("  sujet            : %s" % sujet["bundle_name"])
+    dis("  bundle_sha256    : %s" % sujet["bundle_sha256"])
+    dis("  nature           : %s" % arguments.kind)
+    dis("  cle              : %s" % kid)
+    dis("  gel du sujet     : %s (conserve)" % sujet.get("subject_frozen_at_declared"))
+    dis()
+    dis("L archive n a pas ete touchee : l attestation est DETACHEE.")
+    dis("`attested_at_declared` est une date DECLAREE, pas un horodatage")
+    dis("independant. Verifier avec :")
+    dis("  python verify_attestation.py %s --archive %s --trust-store <magasin>"
           % (arguments.out, arguments.archive))
     return 0
 
@@ -373,9 +450,10 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(
         description="Signe une attestation detachee sur un dossier de preuve Evidence."
     )
+    _PARENT = _parent_langue()
     sous = analyseur.add_subparsers(dest="commande", required=True)
 
-    g = sous.add_parser("genkey", help="generer une cle de test et son magasin de confiance")
+    g = sous.add_parser("genkey", parents=[_PARENT], help="generer une cle de test et son magasin de confiance")
     g.add_argument("--kid", required=True, help="identifiant de cle, jamais reutilise")
     g.add_argument("--out", type=Path, required=True,
                    help="fichier de cle PRIVEE -- refuse sous la racine du depot")
@@ -394,7 +472,7 @@ def main() -> int:
     g.add_argument("--valid-from", required=True, metavar="2026-11-05T00:00:00Z")
     g.add_argument("--key-notes", default="")
 
-    a = sous.add_parser("attest", help="signer une attestation sur une archive")
+    a = sous.add_parser("attest", parents=[_PARENT], help="signer une attestation sur une archive")
     a.add_argument("--archive", type=Path, required=True)
     a.add_argument("--key", type=Path, required=True, help="la cle privee, hors du depot")
     a.add_argument("--out", type=Path, required=True)
@@ -414,6 +492,7 @@ def main() -> int:
                    help="inscrire un ancrage tiers PREVU (n eleve aucun niveau)")
 
     arguments = analyseur.parse_args()
+    _pose_langue(arguments)
     if arguments.commande == "genkey":
         return genkey(arguments)
     return attest(arguments)

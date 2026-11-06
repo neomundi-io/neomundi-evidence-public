@@ -39,6 +39,90 @@ import re
 import sys
 from pathlib import Path
 
+
+# La racine du depot doit etre sur `sys.path` AVANT d importer `i18n` :
+# lance comme `python adapters/receipt_import.py`, `sys.path[0]` vaut
+# `adapters/`, pas la racine. Sans ces deux lignes, `import i18n` echoue,
+# le repli silencieux prend le relais, et `--lang en` ne traduit RIEN --
+# constate le 6 novembre sur le resultat de fusion de la PR #9.
+# `reconcile.py` y echappait par accident : il importe deja `bind`, donc
+# il posait la racine pour une autre raison.
+RACINE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RACINE))
+
+# ---------------------------------------------------------------------------
+# La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
+# cote, cet outil tourne et rend exactement les memes verdicts, en francais.
+# Les controles ne doivent jamais dependre de la couche de traduction.
+# ---------------------------------------------------------------------------
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+#: La langue d affichage, posee une fois par `main`. Une cellule plutot
+#: qu un parametre : il y a 11 appels a `dis` dans ce fichier, et les
+#: renommer se relit, leur ajouter un argument non.
+_LANGUE = [i18n.FR]
+
+
+def dis(*morceaux: object) -> None:
+    """Imprime de la prose, dans la langue courante.
+
+    Seul le FORMAT est traduit. Les arguments -- empreintes, decomptes,
+    noms de fichiers, etiquettes venues d un recu tiers -- traversent
+    VERBATIM : les traduire les abimerait.
+    """
+    if not morceaux:
+        print()
+        return
+    premier = morceaux[0]
+    if isinstance(premier, str):
+        # DEUX formes d appel coexistent dans ce depot :
+        #   dis("x : %s", valeur)      -> `premier` est un FORMAT
+        #   dis("x : %s" % valeur)     -> `premier` est DEJA rendu
+        # La premiere se traduit par recherche exacte du format ; la
+        # seconde par le moteur a motifs, qui en extrait les arguments.
+        # Sans ce repli, toute la prose construite par `%` sortait en
+        # francais -- et c est la forme majoritaire ici.
+        pose = i18n.traduire_format(premier, _LANGUE[0])
+        if pose == premier:
+            pose = i18n.traduire(premier, _LANGUE[0])
+        premier = pose
+    print(premier, *morceaux[1:])
+
+
+def _pose_langue(arguments: "argparse.Namespace") -> None:
+    """Pose la langue depuis les arguments, si l outil en expose une."""
+    _LANGUE[0] = getattr(arguments, "lang", i18n.FR) or i18n.FR
+
+#: `--lang` est declare sur un analyseur PARENT, pour qu il s ecrive apres
+#: la sous-commande -- `verify <fichier> --lang en` -- qui est la facon dont
+#: on l ecrit naturellement.
+def _parent_langue() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    return parent
+
 SCHEMA = "neomundi.evidence.external-receipt/1"
 
 #: Une empreinte SHA-256 en hexadecimal, pour la reperer dans un texte.
@@ -236,6 +320,13 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(
         description="Importe un recu de preuve externe, sans en interpreter le sens."
     )
+    analyseur.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun "
+             "code de sortie, aucun nom de champ et aucune empreinte.",
+    )
     analyseur.add_argument("receipt", type=Path)
     analyseur.add_argument("--received-at", required=True,
                            metavar="2026-11-05T12:00:00Z",
@@ -243,12 +334,13 @@ def main() -> int:
                                 "explicitement : l outil ne lit pas l horloge.")
     analyseur.add_argument("--out", type=Path, default=None)
     arguments = analyseur.parse_args()
+    _pose_langue(arguments)
 
     try:
         octets = arguments.receipt.read_bytes()
         recu = importer(octets, arguments.receipt.name, arguments.received_at)
     except (Illisible, OSError) as erreur:
-        print("[FAIL      ] %s" % erreur)
+        dis("[FAIL      ] %s" % erreur)
         return 1
 
     sortie = json.dumps(recu, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
@@ -257,21 +349,21 @@ def main() -> int:
         # LF explicite : un recu normalise entre dans une chaine de
         # reconciliation, et son empreinte ne doit pas dependre du systeme.
         arguments.out.write_bytes(sortie.encode("utf-8"))
-        print("recu normalise : %s" % arguments.out)
+        dis("recu normalise : %s" % arguments.out)
     else:
         sys.stdout.write(sortie)
 
-    print()
-    print("source      : %s (%s, %d octets)"
+    dis()
+    dis("source      : %s (%s, %d octets)"
           % (recu["source"]["name"], recu["source"]["form"],
              recu["source"]["size_bytes"]))
-    print("empreinte   : %s" % recu["source"]["sha256"])
-    print("champs      : %d candidats releves" % len(recu["fields"]))
-    print("empreintes  : %d trouvees dans le document" % len(recu["digests"]))
-    print("signatures  : 0 -- aucune n est reconnue par cet outil")
-    print()
-    print("AUCUNE correspondance n a ete supposee. Pour reconcilier, fournir une")
-    print("table de correspondance EXPLICITE a `adapters/reconcile.py`.")
+    dis("empreinte   : %s" % recu["source"]["sha256"])
+    dis("champs      : %d candidats releves" % len(recu["fields"]))
+    dis("empreintes  : %d trouvees dans le document" % len(recu["digests"]))
+    dis("signatures  : 0 -- aucune n est reconnue par cet outil")
+    dis()
+    dis("AUCUNE correspondance n a ete supposee. Pour reconcilier, fournir une")
+    dis("table de correspondance EXPLICITE a `adapters/reconcile.py`.")
     return 0
 
 

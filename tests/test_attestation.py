@@ -39,6 +39,7 @@ import zipfile
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RACINE))
 SIGN = RACINE / "sign.py"
 VERIFY_ATT = RACINE / "verify_attestation.py"
 BIND = RACINE / "bind.py"
@@ -584,6 +585,58 @@ def cas(banc: Banc) -> list[tuple[str, str, bool, str]]:
          and etat(s, "profil de canonicalisation") == "FAIL"
          and etat(s, "signature cryptographique") == "PASS",
          "profil FAIL et signature PASS -- les deux controles sont bien distincts")
+
+    # ---- 26 et 27. LA FABRIQUE D ARGUMENTS, structurellement ----------
+    #
+    # UNE GARDE QUI SAUTE EN CI NE GARDE RIEN.
+    #
+    # Les cas 9b et 9c etaient censes garder ce point. Ils ne le font pas :
+    # ils exigent l archive de DEMONSTRATION, et la CI les lance sur la
+    # FIXTURE -- donc ils ressortent INAPPLICABLE. Le defaut est passe
+    # ainsi le 6 novembre : `--store-digest` et `--lang` ont ete ajoutes a
+    # l analyseur de `verify_attestation.py` et oublies dans la fabrique,
+    # et `bind.py --attestation` est retombe sur le meme AttributeError que
+    # `anchor_proof` avait deja produit. Verifie en reintroduisant le
+    # defaut : la suite restait a 22/22.
+    #
+    # Ce controle ne depend d AUCUNE archive, donc il ne peut pas sauter.
+    # Et il est plus fort qu un scenario : un champ ajoute demain et oublie
+    # ici sera signale meme si aucun scenario ne l exerce.
+    import ast as _ast
+
+    source_va = (RACINE / "verify_attestation.py").read_text(encoding="utf-8")
+    arbre_va = _ast.parse(source_va)
+    fonctions = {n.name: n for n in _ast.walk(arbre_va)
+                 if isinstance(n, _ast.FunctionDef)}
+
+    lus: set[str] = set()
+    for nom_fn in ("verifier", "rendre"):
+        if nom_fn not in fonctions:
+            continue
+        for n in _ast.walk(fonctions[nom_fn]):
+            if (isinstance(n, _ast.Attribute)
+                    and isinstance(n.value, _ast.Name)
+                    and n.value.id == "arguments"):
+                lus.add(n.attr)
+
+    import verify_attestation as _va
+
+    fournis = set(vars(_va.arguments_de_verification(
+        attestation=RACINE / "inexistant.jws")))
+    manquants = sorted(lus - fournis)
+
+    pose("26", "la fabrique fournit TOUT ce que `verifier` lit",
+         not manquants,
+         "%d champ(s) lus par verifier/rendre, tous fournis" % len(lus)
+         if not manquants else "MANQUANTS : %s" % manquants)
+
+    # Dans l autre sens : un champ fourni que personne ne lit est du bruit,
+    # pas un defaut. On ne l exige donc pas -- on le NOMME, pour qu il ne
+    # s accumule pas sans qu on le sache.
+    inutiles = sorted(fournis - lus)
+    pose("27", "les champs de la fabrique que `verifier` ne lit pas sont nommes",
+         True,
+         "aucun" if not inutiles else "non lus : %s" % inutiles)
 
     return r
 

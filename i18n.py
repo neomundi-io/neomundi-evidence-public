@@ -45,10 +45,22 @@ Si aucun etage ne repond, la chaine francaise sort telle quelle. Ce n est
 pas un echec silencieux : le cas 7 de `tests/test_i18n.py` exerce l outil
 sur des archives reelles et ECHOUE si le moindre residu apparait. La
 couverture est donc MESUREE, jamais affirmee.
+
+DEUX QUESTIONS DIFFERENTES, ET C EST LE PIEGE
+---------------------------------------------
+
+`residu` demande << cette chaine est-elle TRADUISIBLE ? >>.
+`devrait_changer` demande << le catalogue promet-il qu elle CHANGE ? >>.
+
+La seconde est la bonne pour un controle par paire. Le 6 novembre,
+`receipt_import.py` ne traduisait rien -- son `import i18n` echouait parce
+que `sys.path[0]` vaut `adapters/` et non la racine -- et `residu` le
+declarait conforme, puisque ses chaines etaient bien au catalogue. Un outil
+entierement francais est ainsi passe pour traduit.
 """
 from __future__ import annotations
 
-import re
+import re as _re_module
 
 FR = "fr"
 EN = "en"
@@ -137,11 +149,240 @@ EXACT: dict[str, str] = {
         "without a manifest, nothing is verifiable",
     "un membre est corrompu": "a member is corrupt",
 
+    # ---- reconcile.py : notes de statut et frontieres
+    'absent des deux cotes':
+        'absent on both sides',
+    'chaines identiques':
+        'identical strings',
+    'chaines differentes. Les deux sont conservees ; rien n est tranche.':
+        'different strings. Both are preserved; nothing is settled.',
+    'aucune empreinte ni identifiant commun entre le recu et le corpus. Une proximite de date, de modele ou de valeur ne constitue pas une liaison.':
+        'no digest and no identifier in common between the receipt and the corpus. A closeness of date, model or value does not constitute a binding.',
+    'la table declare ce champ non comparable':
+        'the table declares this field not comparable',
+    'refusee':
+        'refused',
+    'empreinte':
+        'digest',
+    'identifiant':
+        'identifier',
+    'version de mesure':
+        'measurement version',
+    'couverture de mesure':
+        'measurement coverage',
+    'definition du score':
+        'score definition',
+    'Preuve primaire':
+        'Primary evidence',
+    'Declaration externe':
+        'External declaration',
+    'Conclusion verifiee':
+        'Verified conclusion',
+    'les empreintes de notre archive, que nous recalculons':
+        'the digests of our archive, which we recompute',
+    'tout champ du recu : valeur, statut, identifiant':
+        'every field of the receipt: value, status, identifier',
+    'toute signature annoncee et non verifiee':
+        'every signature announced and not verified',
+    'Un recu externe est une DECLARATION. Rien ici ne le transforme en preuve verifiee.':
+        'An external receipt is a DECLARATION. Nothing here turns it into verified evidence.',
+    'Aucune divergence n est tranchee : les deux valeurs sont conservees.':
+        'No divergence is settled: both values are preserved.',
+    'Aucune signature n a ete verifiee ; le recu n est pas qualifie de signe.':
+        'No signature was verified; the receipt is not called signed.',
+    'Aucune correspondance n est devinee : sans entree dans la table, un champ est NOT COMPARABLE.':
+        'No mapping is guessed: without an entry in the table, a field is NOT COMPARABLE.',
+    'aucune liaison etablie : il n y a pas de cote NeoMundi a confronter.':
+        'no binding established: there is no NeoMundi side to compare against.',
+
+    # ====================================================================
+    # reconcile.py, sign.py, receipt_import.py
+    # ====================================================================
+    # ---- prose sans argument
+    'FRONTIERES DE COMPARABILITE -- evaluees AVANT les valeurs :':
+        'COMPARABILITY BOUNDARIES -- evaluated BEFORE the values:',
+    'la table ne declare aucune correspondance':
+        'the table declares no mapping',
+    'Aucun statut n a change : seul le code de sortie en tient compte (2).':
+        'No status changed: only the exit code accounts for it (2).',
+    'MODE STRICT : tous les champs sont etablis.':
+        'STRICT MODE: every field is established.',
+    'NE JAMAIS la commiter, ni la placer dans une archive ou un exemple.':
+        'NEVER commit it, and never place it in an archive or an example.',
+    'L archive n a pas ete touchee : l attestation est DETACHEE.':
+        'The archive was not touched: the attestation is DETACHED.',
+    '`attested_at_declared` est une date DECLAREE, pas un horodatage':
+        '`attested_at_declared` is a DECLARED date, not an independent',
+    'independant. Verifier avec :':
+        'timestamp. Verify with:',
+    '[FAIL] `cryptography` est requis pour SIGNER : pip install cryptography':
+        '[FAIL] `cryptography` is required to SIGN: pip install cryptography',
+    '(le verificateur, lui, s en passe et rend NOT TESTED)':
+        '(the verifier, however, does without it and returns NOT TESTED)',
+    '[FAIL] attestation retrospective refusee : le manifeste du sujet ne porte aucune date de gel exploitable. Une attestation retrospective doit conserver la date de gel du corpus.':
+        "[FAIL] retrospective attestation refused: the subject's manifest carries no usable freeze date. A retrospective attestation must preserve the corpus freeze date.",
+    '[note] mode 0600 non applique par ce systeme de fichiers':
+        '[note] mode 0600 not applied by this filesystem',
+    '[FAIL] l archive n a pas de manifest.json':
+        '[FAIL] the archive has no manifest.json',
+    'signatures  : 0 -- aucune n est reconnue par cet outil':
+        'signatures  : 0 -- none is recognised by this tool',
+    'AUCUNE correspondance n a ete supposee. Pour reconcilier, fournir une':
+        'NO mapping has been assumed. To reconcile, supply an',
+    'table de correspondance EXPLICITE a `adapters/reconcile.py`.':
+        'EXPLICIT mapping table to `adapters/reconcile.py`.',
+
+    # ====================================================================
+    # bind.py
+    # ====================================================================
+    # ---- prose, intitules et details sans argument
+    'Rappel : une correspondance d empreinte dit que le fichier est celui':
+        'Reminder: a digest match says the file is the one',
+    'auquel l enregistrement se refere. Elle ne dit pas que l execution a':
+        'the record refers to. It does not say the execution',
+    'eu lieu. Verifier avec : python bind.py verify <manifeste>':
+        'took place. Verify with: python bind.py verify <manifest>',
+    'le sujet existe dans son archive':
+        'the subject exists in its archive',
+    '--- verification de l attestation du sujet ---':
+        "--- verification of the subject's attestation ---",
+    '--- fin de la verification de l attestation ---':
+        '--- end of the attestation verification ---',
+    'attestation de l archive du sujet':
+        "attestation of the subject's archive",
+    'l archive est attestee par une cle de confiance : les empreintes qu elle declare le sont aussi, et les artefacts qui s y hachent en heritent.':
+        'the archive is attested by a trusted key: so are the digests it declares, and the artifacts that hash to them inherit it.',
+    'elevation des artefacts par l attestation':
+        'elevation of the artifacts by the attestation',
+    'signatures inscrites au manifeste':
+        'signatures recorded in the manifest',
+    'enonces attaches au manifeste':
+        'statements attached to the manifest',
+    'verite de l execution':
+        'truth of the execution',
+    'hors de portee de cet outil et de ce depot. Lier un artefact a un enregistrement ne dit pas qu une execution a eu lieu, ni quand, ni chez qui. Aucune horloge de confiance, aucun ancrage exterieur.':
+        'out of reach of this tool and of this repository. Binding an artifact to a record does not say an execution took place, nor when, nor at whose hands. No trusted clock, no external anchor.',
+    'Les autres restent au niveau `declared` : aucun ancrage ne les tient.':
+        'The others stay at level `declared`: no anchor holds them.',
+    'schema de manifeste reconnu':
+        'manifest schema recognised',
+    'archive non fournie. La fournir avec --archive <fichier> pour que les empreintes declarees soient confrontees a l enregistrement.':
+        'archive not supplied. Supply it with --archive <file> so that the declared digests are compared against the record.',
+    'l archive fournie est celle du manifeste':
+        "the supplied archive is the manifest's",
+    'le manifeste ne porte pas d empreinte d archive':
+        'the manifest carries no archive digest',
+    'le sujet concorde avec l enregistrement':
+        'the subject agrees with the record',
+    'les empreintes declarees sont celles de l enregistrement':
+        "the declared digests are the record's",
+    'empreintes de l enregistrement non reprises au manifeste':
+        'digests of the record not carried over to the manifest',
+    'aucune revendication ne depasse ce qui est demontre':
+        'no claim exceeds what is demonstrated',
+    'revendications non eprouvees faute d artefact':
+        'claims not exercised for want of an artifact',
+    'manifeste lisible':
+        'manifest readable',
+    'Cette liaison ne doit pas etre presentee comme verifiee.':
+        'This binding must not be presented as verified.',
+    'l archive n a pas de membre observations.jsonl':
+        'the archive has no observations.jsonl member',
+    'verify_attestation introuvable : %s':
+        'verify_attestation not found: %s',
+    'aucune revendication n a pu etre eprouvee : rien n est affirme ici.':
+        'no claim could be exercised: nothing is asserted here.',
+    'Soit : les artefacts offerts sont ceux auxquels l enregistrement\nse refere, ET une partie identifiee s est engagee sur l empreinte\nde l archive qui les declare. Ce n est toujours pas une preuve que\nl execution a eu lieu, ni une preuve de la DATE : celle-ci reste\ndeclaree faute d ancrage tiers.':
+        'That is: the artifacts offered are the ones the record refers\nto, AND an identified party committed to the digest of the\narchive that declares them. It is still not a proof that the\nexecution took place, nor a proof of the DATE: that remains\ndeclared, for want of a third-party anchor.',
+    'Soit : les artefacts offerts sont bien ceux auxquels\nl enregistrement se refere. Ce n est pas une preuve que\nl execution a eu lieu.':
+        'That is: the artifacts offered are indeed the ones the\nrecord refers to. It is not a proof that the execution\ntook place.',
+    'Soit : rien n a pu etre ancre dans l enregistrement. Le\nmanifeste est un document, pas une preuve.':
+        'That is: nothing could be anchored in the record. The\nmanifest is a document, not a proof.',
+
+    # ====================================================================
+    # timestamp.py
+    # ====================================================================
+    # ---- prose et intitules, sans argument
+    'SEULE cette valeur de 32 octets est transmise. Ni l archive, ni le':
+        'ONLY this 32-byte value is transmitted. Neither the archive, nor the',
+    'manifeste, ni aucune donnee de pilote ne quitte ce poste.':
+        'manifest, nor any pilot data leaves this machine.',
+    'de temps.** Relancer `upgrade` dans quelques heures, une fois la':
+        'of time.** Re-run `upgrade` in a few hours, once the',
+    'transaction confirmee par la chaine.':
+        'transaction is confirmed by the chain.',
+    '(lue a offset fixe, sans aucune dependance)':
+        '(read at a fixed offset, with no dependency at all)',
+    'temps verifie par un tiers':
+        'time verified by a third party',
+    'qualification eIDAS':
+        'eIDAS qualification',
+    'AUCUNE. OpenTimestamps n est pas un prestataire de services de confiance qualifie au sens du reglement eIDAS, et rien ici ne doit etre presente comme un horodatage qualifie.':
+        'NONE. OpenTimestamps is not a qualified trust service provider under the eIDAS regulation, and nothing here may be presented as a qualified timestamp.',
+    'ce n est pas un fichier .ots detache : la magie attendue est absente':
+        'this is not a detached .ots file: the expected magic is absent',
+    '[FAIL] aucun calendrier n a repondu : aucune preuve n a ete ecrite.':
+        '[FAIL] no calendar answered: no proof was written.',
+    'attestations : NON LUES -- `opentimestamps` est absent.':
+        'attestations: NOT READ -- `opentimestamps` is absent.',
+    'pip install opentimestamps pour les lire.':
+        'pip install opentimestamps to read them.',
+    'Au moins une attestation Bitcoin est presente. Le TEMPS qu elle':
+        'At least one Bitcoin attestation is present. The TIME it',
+    'porte reste a verifier avec le client officiel :':
+        'carries remains to be verified with the official client:',
+    'revendique reste a verifier avec le client officiel :':
+        'claims remains to be verified with the official client:',
+    '**Ce n est pas une preuve de temps.** Relancer `upgrade` plus tard.':
+        '**This is not a proof of time.** Re-run `upgrade` later.',
+    'sujet non fourni. Le fournir avec --subject <fichier> pour que la liaison soit eprouvee.':
+        'subject not supplied. Supply it with --subject <file> so that the binding is exercised.',
+    'descripteur de liaison':
+        'binding descriptor',
+    'aucun descripteur fourni ; la liaison ci-dessus suffit a etablir sur quoi la preuve porte.':
+        'no descriptor supplied; the binding above is enough to establish what the proof is about.',
+    'arbre des attestations':
+        'attestation tree',
+    '`opentimestamps` est absent de cet environnement : l arbre n est pas lu. `pip install opentimestamps` pour l eprouver. La LIAISON ci-dessus, elle, ne depend de rien.':
+        '`opentimestamps` is absent from this environment: the tree is not read. `pip install opentimestamps` to exercise it. The BINDING above, however, depends on nothing.',
+    'etat inconnu sans la bibliotheque':
+        'state unknown without the library',
+    'Cette preuve ne doit pas etre presentee comme verifiee.':
+        'This proof must not be presented as verified.',
+    'Rien n a progresse : la transaction n est probablement pas encore':
+        'Nothing progressed: the transaction is probably not yet',
+    'confirmee par la chaine. Reessayer plus tard. Tant qu aucune':
+        'confirmed by the chain. Try again later. As long as no',
+    'attestation Bitcoin n apparait, **aucune date n est attestee.**':
+        'Bitcoin attestation appears, **no date is attested.**',
+    'La preuve porte desormais une attestation Bitcoin. Le TEMPS qu elle':
+        'The proof now carries a Bitcoin attestation. The TIME it',
+    'La preuve s engage sur le sujet, et porte une attestation Bitcoin.':
+        'The proof commits to the subject, and carries a Bitcoin attestation.',
+    'Le TEMPS qu elle revendique reste a verifier avec `ots verify`.':
+        'The TIME it claims remains to be verified with `ots verify`.',
+    'La liaison est etablie. Le TEMPS ne l est PAS : la preuve est':
+        'The binding is established. The TIME is NOT: the proof is',
+    'PENDING, ce qui n atteste aucune date.':
+        'PENDING, which attests no date.',
+    'la preuve s engage exactement sur l empreinte du sujet':
+        "the proof commits exactly to the subject's digest",
+    'le descripteur devrait etre un objet JSON':
+        'the descriptor should be a JSON object',
+
     # ====================================================================
     # verify_attestation.py
     # ====================================================================
 
     # ---- intitules de controle ------------------------------------------
+    # ---- C-5 : la confrontation de l empreinte du magasin ---------------
+    "empreinte du magasin confrontee": "trust store digest compared",
+    "aucune empreinte fournie. La fournir avec --store-digest <sha256>, "
+    "obtenue par un AUTRE canal que celui qui a fourni le magasin. Un "
+    "magasin non confronte n est pas faux : il est non confronte.":
+        "no digest supplied. Supply it with --store-digest <sha256>, "
+        "obtained through a channel OTHER than the one that supplied the "
+        "store. An uncompared store is not false: it is uncompared.",
     "ancrage tiers": "third-party anchor",
     "attestation lisible": "attestation readable",
     "capacite juridique du signataire": "legal capacity of the signer",
@@ -302,6 +543,279 @@ FORMATS: dict[str, str] = {
     "%s, ligne %d : attendu un objet, recu %s":
         "%s, line %d: expected an object, got %s",
 
+    # ---- reconcile.py : ossature et notes formatees
+    '[%-14s] %-26s  recu=%-14s  nous=%s':
+        '[%-14s] %-26s  receipt=%-14s  us=%s',
+    'une empreinte du recu egale une empreinte que l enregistrement declare : %s':
+        'a digest of the receipt equals a digest the record declares: %s',
+    'le recu porte %s = %r, retrouve dans notre corpus':
+        'the receipt carries %s = %r, found again in our corpus',
+    'ecart %.6g, dans la tolerance %.6g':
+        'gap %.6g, within the tolerance %.6g',
+    'ecart %.6g, au-dela de la tolerance %.6g. **LES DEUX VALEURS SONT CONSERVEES TELLES QUELLES** : rien n est tranche ici.':
+        'gap %.6g, beyond the tolerance %.6g. **BOTH VALUES ARE PRESERVED AS THEY ARE**: nothing is settled here.',
+    'l etiquette %r n est pas dans le recu ; notre cote porte une valeur':
+        'label %r is not in the receipt; our side carries a value',
+    'le recu porte une valeur ; notre enregistrement n a pas de champ %r pour cette observation':
+        'the receipt carries a value; our record has no field %r for this observation',
+    'VALEUR MESUREE, et une frontiere de comparabilite est franchie : %s. Les deux valeurs ne mesurent donc pas forcement la meme chose, et les declarer divergentes serait une faute de raisonnement, pas une decouverte.':
+        'MEASURED VALUE, and a comparability boundary is crossed: %s. The two values therefore do not necessarily measure the same thing, and declaring them divergent would be a reasoning error, not a discovery.',
+    'le recu declare cette valeur, et sa verification demande %s -- qui n est pas fourni. Ce n est ni une concordance ni une divergence : c est une impossibilite de controler.':
+        'the receipt declares this value, and verifying it requires %s -- which is not supplied. This is neither an agreement nor a divergence: it is an impossibility to check.',
+    'aucune empreinte ni identifiant commun. L observation %r a ete DEMANDEE, mais une demande n est pas une correspondance demontree : la liaison est refusee.':
+        'no digest and no identifier in common. Observation %r was REQUESTED, but a request is not a demonstrated match: the binding is refused.',
+    'ETIQUETTE AMBIGUE : %d champs du recu portent %r (%s). Viser un `receipt_source_path` dans la table pour lever l ambiguite. Choisir le premier serait deviner.':
+        'AMBIGUOUS LABEL: %d fields of the receipt carry %r (%s). Target a `receipt_source_path` in the table to lift the ambiguity. Choosing the first would be guessing.',
+    '%s du recu NON DECLAREE -- impossible d etablir la comparabilite':
+        '%s of the receipt NOT DECLARED -- comparability cannot be established',
+    '%s de notre cote inconnue':
+        '%s on our side unknown',
+    '%s : recu %r, nous %r':
+        '%s: receipt %r, us %r',
+
+    # ====================================================================
+    # reconcile.py, sign.py, receipt_import.py
+    # ====================================================================
+    # ---- prose et details formates
+    'Recu     : %s':
+        'Receipt  : %s',
+    'source : %s (%s)':
+        'source : %s (%s)',
+    'Archive  : %s':
+        'Archive  : %s',
+    'Table    : %s (%d correspondance(s) declaree(s))':
+        'Table    : %s (%d declared mapping(s))',
+    'LIAISON  : %s':
+        'BINDING  : %s',
+    'CHAMP PAR CHAMP (tolerance numerique %.6g) :':
+        'FIELD BY FIELD (numeric tolerance %.6g):',
+    '%s : schema %r inconnu ; attendu %r':
+        '%s: schema %r unknown; expected %r',
+    'Aucune liaison : %d champ(s) ressortent NOT COMPARABLE.':
+        'No binding: %d field(s) come out NOT COMPARABLE.',
+    'materiaux fournis : %s':
+        'materials supplied: %s',
+    '%d contradiction(s) CONSERVEE(S), aucune tranchee :':
+        '%d contradiction(s) PRESERVED, none settled:',
+    'MODE STRICT : %d champ(s) non etabli(s), liaison %s.':
+        'STRICT MODE: %d field(s) not established, binding %s.',
+    'rapport Markdown : %s':
+        'Markdown report : %s',
+    'rapport JSON     : %s':
+        'JSON report     : %s',
+    '%s : recu %r / nous %r  [%s]':
+        '%s: receipt %r / us %r  [%s]',
+    '[FAIL      ] %s':
+        '[FAIL      ] %s',
+    'cle privee ecrite : %s':
+        'private key written: %s',
+    'kid             : %s':
+        'kid             : %s',
+    'attestation ecrite : %s':
+        'attestation written: %s',
+    'sujet            : %s':
+        'subject          : %s',
+    'bundle_sha256    : %s':
+        'bundle_sha256    : %s',
+    'nature           : %s':
+        'nature           : %s',
+    'cle              : %s':
+        'key              : %s',
+    'gel du sujet     : %s (conserve)':
+        'subject freeze   : %s (preserved)',
+    'python verify_attestation.py %s --archive %s --trust-store <magasin>':
+        'python verify_attestation.py %s --archive %s --trust-store <store>',
+    '[FAIL] refus d ecrire %s sous la racine du depot (%s).\n       Une cle privee commitee reste dans l historique Git pour toujours.\n       Choisir un chemin hors du depot.':
+        '[FAIL] refusing to write %s under the repository root (%s).\n       A committed private key stays in Git history forever.\n       Choose a path outside the repository.',
+    'magasin de confiance ecrit : %s':
+        'trust store written      : %s',
+    'cle publique (x)         : %s':
+        'public key (x)           : %s',
+    '[FAIL] archive introuvable : %s':
+        '[FAIL] archive not found: %s',
+    'source      : %s (%s, %d octets)':
+        'source      : %s (%s, %d bytes)',
+    'champs      : %d candidats releves':
+        'fields      : %d candidates collected',
+    'empreintes  : %d trouvees dans le document':
+        'digests     : %d found in the document',
+    'recu de %d octets, au-dela du plafond de %d : non lu':
+        'receipt of %d bytes, beyond the ceiling of %d: not read',
+    'recu normalise : %s':
+        'normalised receipt: %s',
+    'recu JSON illisible : %s':
+        'unreadable JSON receipt: %s',
+
+    # ====================================================================
+    # bind.py
+    # ====================================================================
+    # ---- prose et details formates
+    '%d artefact(s), %d empreinte(s) declaree(s) par l enregistrement.':
+        '%d artifact(s), %d digest(s) declared by the record.',
+    '%d artefact(s) se hachent sur une empreinte de l enregistrement.':
+        '%d artifact(s) hash to a digest of the record.',
+    '%d artefact(s)':
+        '%d artifact(s)',
+    '%d signature(s) presente(s) (cles %s) et AUCUNE n est verifiee ici. Une signature non verifiee ne vaut pas mieux qu un champ texte.':
+        '%d signature(s) present (keys %s) and NONE is verified here. An unverified signature is worth no more than a text field.',
+    '%d enonce(s). Une description textuelle d une execution ne constitue pas une preuve que cette execution a eu lieu : aucun de ces textes n est verifie, ni ne peut l etre.':
+        '%d statement(s). A textual description of an execution does not constitute a proof that this execution took place: none of these texts is verified, nor can be.',
+    'Manifeste de preuve : %s':
+        'Evidence manifest   : %s',
+    'empreinte           : %s':
+        'digest              : %s',
+    'racine des artefacts: %s':
+        'artifact root       : %s',
+    'chemin absolu refuse : %r':
+        'absolute path refused: %r',
+    'traversee de repertoire refusee : %r':
+        'directory traversal refused: %r',
+    'le chemin sort du repertoire racine : %r resout hors de %s':
+        'the path escapes the root directory: %r resolves outside %s',
+    'manifeste ecrit : %s':
+        'manifest written: %s',
+    'empreinte        : %s':
+        'digest           : %s',
+    '%d empreinte(s)':
+        '%d digest(s)',
+    '%s : rien n est offert pour elles':
+        '%s: nothing is offered for them',
+    'ses octets se hachent sur %s de l enregistrement. Niveau derive : %s.':
+        'its bytes hash to %s of the record. Derived level: %s.',
+    'aucune attestation fournie. La fournir avec --attestation <fichier.jws> --trust-store <magasin> pour que le niveau `%s` soit atteignable.':
+        'no attestation supplied. Supply it with --attestation <file.jws> --trust-store <store> so that level `%s` becomes reachable.',
+    'une attestation est fournie sans --archive ou sans --trust-store : elle ne peut etre confrontee a rien. Aucun niveau n est eleve.':
+        'an attestation is supplied without --archive or without --trust-store: it can be compared to nothing. No level is raised.',
+    'l attestation fournie n atteint pas `%s` (%d FAIL, %d NOT TESTED dans sa propre verification). Aucun niveau n est eleve.':
+        'the supplied attestation does not reach `%s` (%d FAIL, %d NOT TESTED in its own verification). No level is raised.',
+    '%s. Fournir les fichiers sous --root pour les eprouver.':
+        '%s. Supply the files under --root to exercise them.',
+    'aucune, et ce depot n en verifie aucune : le tableau `signatures[]` du manifeste reste non exploite. Le niveau `%s` s obtient par une attestation DETACHEE de l archive (--attestation), pas par ce champ.':
+        "none, and this repository verifies none: the manifest's `signatures[]` array stays unused. Level `%s` is obtained by an attestation DETACHED from the archive (--attestation), not by this field.",
+    'Niveau de garantie DERIVE pour la liaison : %s':
+        'Assurance level DERIVED for the binding: %s',
+    'aucune observation %r dans l archive (%d observations presentes)':
+        'no observation %r in the archive (%d observations present)',
+    '%d observations portent l identifiant %r : l archive est ambigue':
+        '%d observations carry the identifier %r: the archive is ambiguous',
+    'artefact mal forme : %r ; attendu role=chemin':
+        'malformed artifact: %r; expected role=path',
+    'role %r inconnu ; connus : %s':
+        'role %r unknown; known: %s',
+    'artefact introuvable : %s':
+        'artifact not found: %s',
+    'le manifeste nomme %s ; l archive fournie se hache sur %s':
+        'the manifest names %s; the supplied archive hashes to %s',
+    'fichier absent sous la racine : %s. Sa revendication `%s` n a pas pu etre eprouvee ; elle n est pas contredite pour autant.':
+        'file absent under the root: %s. Its claim `%s` could not be exercised; it is not contradicted for that.',
+    '%d octets, au-dela du plafond de %d. Non lu : relever le plafond avec --max-artifact-bytes pour l eprouver.':
+        '%d bytes, beyond the ceiling of %d. Not read: raise the ceiling with --max-artifact-bytes to exercise it.',
+    'le manifeste annonce %s..., le fichier se hache sur %s...':
+        'the manifest announces %s..., the file hashes to %s...',
+    'annoncee %d octets, observee %d':
+        'announced %d bytes, observed %d',
+    'present et conforme au manifeste, mais SANS ancrage dans l enregistrement. Niveau derive : %s.':
+        'present and conformant to the manifest, but with NO anchor in the record. Derived level: %s.',
+    'pretend se lier a %s, que l enregistrement ne declare pas. Un fichier quelconque ne devient pas une preuve en se nommant.':
+        'claims to bind to %s, which the record does not declare. Any old file does not become evidence by naming itself.',
+    'l enregistrement declare %s = %s..., le fichier se hache sur %s...':
+        'the record declares %s = %s..., the file hashes to %s...',
+    '%d revendication(s) eprouvee(s)':
+        '%d claim(s) exercised',
+    'controle interrompu : %s: %s':
+        'check interrupted: %s: %s',
+    'Soit : %d artefact(s) sur %d n ont pas pu etre eprouves ici,\ndonc la liaison entiere retombe au niveau declaratif. Ce n est\npas un refus du manifeste : c est une verification incomplete.':
+        'That is: %d artifact(s) out of %d could not be exercised here,\nso the whole binding falls back to the declarative level. This\nis not a refusal of the manifest: it is an incomplete check.',
+
+    # ====================================================================
+    # timestamp.py
+    # ====================================================================
+    # ---- prose et details formates
+    'Sujet      : %s':
+        'Subject    : %s',
+    'Empreinte  : %s':
+        'Digest     : %s',
+    'preuve ecrite : %s (%d octets)':
+        'proof written: %s (%d bytes)',
+    'ETAT : PENDING sur %d calendrier(s). **Ce n est pas encore une preuve':
+        'STATE: PENDING on %d calendar(s). **This is not yet a proof',
+    'Preuve    : %s (%d octets)':
+        'Proof     : %s (%d bytes)',
+    'empreinte : %s':
+        'digest    : %s',
+    'empreinte engagee : %s':
+        'committed digest  : %s',
+    '%d attestation(s) :':
+        '%d attestation(s):',
+    'Preuve  : %s':
+        'Proof   : %s',
+    'empreinte de la preuve : %s':
+        'digest of the proof    : %s',
+    'sujet   : %s':
+        'subject : %s',
+    'magie, version %d, SHA-256 ; %d octets':
+        'magic, version %d, SHA-256; %d bytes',
+    'hors de portee de cet outil : valider une attestation Bitcoin demande un en-tete de bloc, donc une source de confiance que nous n avons pas. A confronter avec le client officiel : `ots verify %s`':
+        'out of reach of this tool: validating a Bitcoin attestation needs a block header, hence a source of trust we do not have. To be compared with the official client: `ots verify %s`',
+    'Preuve      : %s':
+        'Proof       : %s',
+    'engagee sur : %s':
+        'committed to: %s',
+    'nouvelle preuve : %s':
+        'new proof       : %s',
+    'attestations Bitcoin : %d avant, %d apres':
+        'Bitcoin attestations : %d before, %d after',
+    'l ancienne preuve est INTACTE : %s':
+        'the earlier proof is INTACT    : %s',
+    'preuve trop courte : %d octets, il en faut au moins %d':
+        'proof too short: %d bytes, at least %d are needed',
+    'version majeure %d non prise en charge ; attendu %d':
+        'major version %d not supported; expected %d',
+    'operation de hachage 0x%02x non prise en charge ; seul SHA-256 (0x%02x) est accepte':
+        'hash operation 0x%02x not supported; only SHA-256 (0x%02x) is accepted',
+    '[FAIL] sujet introuvable : %s':
+        '[FAIL] subject not found: %s',
+    'descripteur   : %s':
+        'descriptor    : %s',
+    'ots verify %s':
+        'ots verify %s',
+    'Aucune attestation Bitcoin : %d PENDING seulement.':
+        'No Bitcoin attestation: %d PENDING only.',
+    'descripteur     : %s':
+        'descriptor      : %s',
+    'upgraded_from : %s':
+        'upgraded_from : %s',
+    '[FAIL] %s':
+        '[FAIL] %s',
+    'PENDING   %s':
+        'PENDING   %s',
+    'sujet introuvable : %s':
+        'subject not found: %s',
+    'preuve illisible par la bibliotheque officielle : %s: %s':
+        'proof unreadable by the official library: %s: %s',
+    '%d pending, %d bitcoin, %d inconnue(s)':
+        '%d pending, %d bitcoin, %d unknown',
+    'BITCOIN   bloc %d':
+        'BITCOIN   block %d',
+    'INCONNUE  tag %s':
+        'UNKNOWN   tag %s',
+    'la preuve s engage sur %s..., le sujet se hache sur %s...':
+        'the proof commits to %s..., the subject hashes to %s...',
+    'concordant ; soumis le %s (declare)':
+        'concordant; submitted on %s (declared)',
+    '%d attestation(s) Bitcoin, bloc(s) %s':
+        '%d Bitcoin attestation(s), block(s) %s',
+    '%d attestation(s) PENDING et AUCUNE Bitcoin. Un `pending` dit qu un calendrier s est engage a inclure l empreinte dans une transaction future : il n atteste aucune date. Relancer `upgrade` apres confirmation.':
+        '%d PENDING attestation(s) and NO Bitcoin one. A `pending` says a calendar undertook to include the digest in a future transaction: it attests no date. Re-run `upgrade` after confirmation.',
+    '[FAIL] %s existe deja. Choisir un autre nom, ou --force.\n       Une preuve ne s ecrase pas : l anterieure est une piece.':
+        '[FAIL] %s already exists. Choose another name, or --force.\n       A proof is not overwritten: the earlier one is evidence.',
+    '[FAIL] `opentimestamps` est requis pour HORODATER : pip install opentimestamps\n       (le verificateur, lui, lit la liaison sans aucune dependance)\n       cause : %s: %s':
+        '[FAIL] `opentimestamps` is required to STAMP: pip install opentimestamps\n       (the verifier, however, reads the binding with no dependency)\n       cause: %s: %s',
+    '[FAIL] `opentimestamps` est requis pour mettre a niveau : pip install opentimestamps\n       cause : %s: %s':
+        '[FAIL] `opentimestamps` is required to upgrade: pip install opentimestamps\n       cause: %s: %s',
+    '[FAIL] ce descripteur ne decrit pas cette preuve :\n       il annonce le sujet %s\n       la preuve engage     %s':
+        '[FAIL] this descriptor does not describe this proof:\n       it announces subject %s\n       the proof commits to %s',
+
     # ====================================================================
     # verify_attestation.py
     # ====================================================================
@@ -349,6 +863,16 @@ FORMATS: dict[str, str] = {
         "the attestation declares a proof with digest %s...; supply it with "
         "--anchor-proof <file> to compare its bytes.",
     "preuve d ancrage introuvable : %s": "anchor proof not found: %s",
+    "les octets du magasin se hachent sur l empreinte annoncee par un "
+    "second canal (%s...). Un faussaire devrait compromettre les DEUX.":
+        "the store's bytes hash to the digest announced by a second channel "
+        "(%s...). A forger would have to compromise BOTH.",
+    "le magasin fourni se hache sur %s..., le second canal annonce %s... : "
+    "ce n est pas le meme magasin. Ne pas s en servir.":
+        "the supplied store hashes to %s..., the second channel announces "
+        "%s...: this is not the same store. Do not use it.",
+    "%s v%s, politique %s, %d cle(s), %d identite(s)":
+        "%s v%s, policy %s, %d key(s), %d identity(ies)",
     "role(s) non resolu(s) dans le magasin : %s":
         "role(s) unresolved in the store: %s",
     "schema %r inconnu ; attendu %r": "schema %r unknown; expected %r",
@@ -428,39 +952,56 @@ FORMATS: dict[str, str] = {
 # --------------------------------------------------------------------------
 
 
-def _vers_motif(format_fr: str) -> tuple[re.Pattern[str], list[str]]:
+#: Un specificateur printf complet : drapeaux, largeur, precision, type.
+#: `%-14s`, `%.6g`, `%02d` sont tous des specificateurs, et un seul non
+#: reconnu suffisait a faire rater tout le motif -- donc a laisser sortir
+#: du francais, en silence.
+_SPEC = _re_module.compile(r"%([-+ 0#]*)(\d*)(?:\.(\d+))?([dsrgfeiu])")
+
+
+def _vers_motif(format_fr: str) -> tuple[_re_module.Pattern[str], list[str]]:
     """Derive de `format_fr` une expression reguliere et l ordre de ses types.
 
     `%d` ne capture que des chiffres, pour qu un format a deux `%d` ne
-    morde pas sur une chaine qui en contiendrait un. `%s` et `%r` sont
-    gourmands au minimum, et le motif est ancre des deux cotes : sans
-    ancrage, un format court matcherait l interieur d un format long et la
-    traduction partirait sur le mauvais.
+    morde pas sur une chaine qui en contiendrait un. Les autres capturent
+    souplement, et le motif est ancre des deux cotes : sans ancrage, un
+    format court matcherait l interieur d un format long et la traduction
+    partirait sur le mauvais.
+
+    La LARGEUR n est jamais imposee au motif. `%-14s` rend une valeur
+    padd�e a droite, et exiger exactement 14 caracteres ferait rater une
+    valeur plus longue : printf deborde, il ne tronque pas. On capture donc
+    souplement, espaces de remplissage compris, et c est le format anglais
+    qui refait la mise en page.
     """
     morceaux: list[str] = []
     types: list[str] = []
     index = 0
     while index < len(format_fr):
-        caractere = format_fr[index]
-        if caractere == "%" and index + 1 < len(format_fr):
-            marque = format_fr[index + 1]
-            if marque == "d":
-                morceaux.append(r"(-?\d+)")
-                types.append("d")
+        if format_fr[index] == "%":
+            if format_fr[index:index + 2] == "%%":
+                morceaux.append(_re_module.escape("%"))
                 index += 2
                 continue
-            if marque in ("s", "r"):
-                morceaux.append(r"(.*?)")
-                types.append(marque)
-                index += 2
+            trouve = _SPEC.match(format_fr, index)
+            if trouve is not None:
+                marque = trouve.group(4)
+                if marque in ("d", "i", "u"):
+                    # Une largeur peut avoir ajoute des espaces autour.
+                    morceaux.append(r"\s*(-?\d+)\s*")
+                    types.append("d")
+                elif marque in ("g", "f", "e"):
+                    morceaux.append(r"\s*(-?[\d.eE+-]+)\s*")
+                    types.append("g")
+                else:
+                    morceaux.append(r"(.*?)")
+                    types.append(marque)
+                index = trouve.end()
                 continue
-            if marque == "%":
-                morceaux.append(re.escape("%"))
-                index += 2
-                continue
-        morceaux.append(re.escape(caractere))
+        morceaux.append(_re_module.escape(format_fr[index]))
         index += 1
-    return re.compile(r"\A" + "".join(morceaux) + r"\Z", re.S), types
+    return (_re_module.compile(r"\A" + "".join(morceaux) + r"\Z", _re_module.S),
+            types)
 
 
 def _construire_motifs() -> list[tuple[re.Pattern[str], list[str], str]]:
@@ -480,6 +1021,60 @@ def _construire_motifs() -> list[tuple[re.Pattern[str], list[str], str]]:
 
 
 _MOTIFS: list[tuple[re.Pattern[str], list[str], str]] = _construire_motifs()
+
+
+def _argument_traduit(valeur: str, langue: str) -> str:
+    """Traduit un argument TEXTUEL s il est de la prose connue.
+
+    Le detail porte parfois sa prose dans un argument. On tente le
+    catalogue sur la valeur, en tolerant un prefixe de ponctuation --
+    << -- des roles coincident... >> arrive ainsi.
+
+    Recursion bornee : on n appelle `traduire` que sur une valeur presente
+    au catalogue EXACT, jamais sur un format, donc pas de boucle.
+    """
+    if not valeur:
+        return valeur
+    pose = EXACT.get(valeur)
+    if pose is not None:
+        return pose
+    # Un prefixe de ponctuation et d espaces se conserve tel quel.
+    depouille = valeur.lstrip(" -–—:;,")
+    prefixe = valeur[: len(valeur) - len(depouille)]
+    pose = EXACT.get(depouille)
+    if pose is not None:
+        return prefixe + pose
+    return valeur
+
+
+def _sans_repr(format_en: str) -> str:
+    """Remplace chaque `%r` par `%s`, specificateurs complets compris.
+
+    Une valeur capturee depuis un `%r` francais porte deja ses guillemets ;
+    la repr-ifier une seconde fois rendrait `"\'inconnu\'"`.
+    """
+    def _remplace(trouve: "_re_module.Match[str]") -> str:
+        if trouve.group(4) == "r":
+            return "%" + trouve.group(1) + trouve.group(2) + (
+                "." + trouve.group(3) if trouve.group(3) else "") + "s"
+        return trouve.group(0)
+
+    sortie: list[str] = []
+    index = 0
+    while index < len(format_en):
+        if format_en[index] == "%":
+            if format_en[index:index + 2] == "%%":
+                sortie.append("%%")
+                index += 2
+                continue
+            trouve = _SPEC.match(format_en, index)
+            if trouve is not None:
+                sortie.append(_remplace(trouve))
+                index = trouve.end()
+                continue
+        sortie.append(format_en[index])
+        index += 1
+    return "".join(sortie)
 
 
 def _argument_traduit(valeur: str, langue: str) -> str:
@@ -539,6 +1134,19 @@ def traduire(texte: str, langue: str) -> str:
     """
     if langue == FR or not texte:
         return texte
+
+    # Les BLANCS d encadrement sont mis de cote, puis remis. Sans cela,
+    # `"\nempreinte engagee : %s"` ne se trouvait ni par recherche exacte
+    # -- la clef n a pas le `\n` -- ni par motif, puisque les motifs sont
+    # ancres `\A...\Z`. Et on ne peut pas renoncer a cet ancrage : c est
+    # lui qui empeche un format court de mordre dans un format long.
+    noyau = texte.strip()
+    if noyau != texte:
+        coupe = len(texte) - len(texte.lstrip())
+        tete = texte[:coupe]
+        queue = texte[len(texte.rstrip()):]
+        return tete + traduire(noyau, langue) + queue
+
     exact = EXACT.get(texte)
     if exact is not None:
         return exact
@@ -555,7 +1163,10 @@ def traduire(texte: str, langue: str) -> str:
         prets: list[object] = []
         for valeur, marque in zip(arguments, types):
             if marque == "d":
-                prets.append(int(valeur))
+                prets.append(int(valeur.strip()))
+                continue
+            if marque == "g":
+                prets.append(float(valeur.strip()))
                 continue
             # Un argument TEXTUEL peut lui-meme etre de la prose -- la ligne
             # des cinq identites en recoit deux. On le soumet au catalogue :
@@ -584,6 +1195,16 @@ def traduire_format(format_fr: str, langue: str) -> str:
     """
     if langue == FR:
         return format_fr
+
+    # Meme raison que dans `traduire` : un format ecrit
+    # `"\nBILAN : %d PASS..."` ne se trouve pas sous la clef sans `\n`.
+    noyau = format_fr.strip()
+    if noyau != format_fr:
+        coupe = len(format_fr) - len(format_fr.lstrip())
+        tete = format_fr[:coupe]
+        queue = format_fr[len(format_fr.rstrip()):]
+        return tete + traduire_format(noyau, langue) + queue
+
     pose = FORMATS.get(format_fr)
     if pose is not None:
         return pose
@@ -617,6 +1238,24 @@ _MARQUEURS_FR = (
     "declare", "empreinte", "manifeste", "archive", "membre", "controle",
     "verifie", "aucune", "portee", "fournir", "corpus d entree",
 )
+
+
+def devrait_changer(texte: str, langue: str) -> bool:
+    """Le catalogue promet-il une traduction DIFFERENTE pour `texte` ?
+
+    A distinguer soigneusement de `couvert`, qui dit seulement que la
+    chaine est connue. Certaines entrees s ecrivent pareil dans les deux
+    langues -- << manifest.json present >> -- et pour celles-la la reponse
+    est non, legitimement.
+
+    Sert au controle par paire : si le francais et l anglais sortent
+    IDENTIQUES alors que cette fonction rend `True`, la traduction n a pas
+    eu lieu. C est ce controle, et non `residu`, qui attrape un outil dont
+    l `import i18n` a echoue et dont le repli silencieux a pris le relais.
+    """
+    if langue == FR or not texte.strip():
+        return False
+    return traduire(texte, langue) != texte
 
 
 def residu(texte: str, langue: str) -> bool:

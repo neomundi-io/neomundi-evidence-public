@@ -1,6 +1,7 @@
 {
   "schema": "neomundi.evidence.trust-store/1",
   "store_id": "neomundi-evidence-test",
+  "store_version": 1,
   "updated_at_declared": "2026-11-06T00:00:00Z",
   "store_kind": "test",
   "verification_policy": {

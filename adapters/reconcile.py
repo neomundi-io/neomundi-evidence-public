@@ -64,6 +64,80 @@ sys.path.insert(0, str(RACINE))
 # Reutilisation explicite : la liaison par empreinte vient de `bind.py`.
 import bind  # noqa: E402
 
+
+# ---------------------------------------------------------------------------
+# La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
+# cote, cet outil tourne et rend exactement les memes verdicts, en francais.
+# Les controles ne doivent jamais dependre de la couche de traduction.
+# ---------------------------------------------------------------------------
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+#: La langue d affichage, posee une fois par `main`. Une cellule plutot
+#: qu un parametre : il y a 23 appels a `dis` dans ce fichier, et les
+#: renommer se relit, leur ajouter un argument non.
+_LANGUE = [i18n.FR]
+
+
+def dis(*morceaux: object) -> None:
+    """Imprime de la prose, dans la langue courante.
+
+    Seul le FORMAT est traduit. Les arguments -- empreintes, decomptes,
+    noms de fichiers, etiquettes venues d un recu tiers -- traversent
+    VERBATIM : les traduire les abimerait.
+    """
+    if not morceaux:
+        print()
+        return
+    premier = morceaux[0]
+    if isinstance(premier, str):
+        # DEUX formes d appel coexistent dans ce depot :
+        #   dis("x : %s", valeur)      -> `premier` est un FORMAT
+        #   dis("x : %s" % valeur)     -> `premier` est DEJA rendu
+        # La premiere se traduit par recherche exacte du format ; la
+        # seconde par le moteur a motifs, qui en extrait les arguments.
+        # Sans ce repli, toute la prose construite par `%` sortait en
+        # francais -- et c est la forme majoritaire ici.
+        pose = i18n.traduire_format(premier, _LANGUE[0])
+        if pose == premier:
+            pose = i18n.traduire(premier, _LANGUE[0])
+        premier = pose
+    print(premier, *morceaux[1:])
+
+
+def _pose_langue(arguments: "argparse.Namespace") -> None:
+    """Pose la langue depuis les arguments, si l outil en expose une."""
+    _LANGUE[0] = getattr(arguments, "lang", i18n.FR) or i18n.FR
+
+#: `--lang` est declare sur un analyseur PARENT, pour qu il s ecrive apres
+#: la sous-commande -- `verify <fichier> --lang en` -- qui est la facon dont
+#: on l ecrit naturellement.
+def _parent_langue() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    return parent
+
 SCHEMA_RECU = "neomundi.evidence.external-receipt/1"
 SCHEMA_RAPPORT = "neomundi.evidence.reconciliation/1"
 SCHEMA_TABLE = "neomundi.evidence.reconciliation-map/1"
@@ -453,16 +527,16 @@ def reconcilier(arguments: argparse.Namespace) -> tuple[dict, int]:
     recu = objet(arguments.receipt, "le recu normalise", SCHEMA_RECU)
     table = charge_table(arguments.map)
 
-    print("Recu     : %s" % arguments.receipt)
-    print("  source : %s (%s)" % (recu["source"]["name"], recu["source"]["sha256"][:16] + "..."))
-    print("Archive  : %s" % arguments.archive)
-    print("Table    : %s (%d correspondance(s) declaree(s))\n"
+    dis("Recu     : %s" % arguments.receipt)
+    dis("  source : %s (%s)" % (recu["source"]["name"], recu["source"]["sha256"][:16] + "..."))
+    dis("Archive  : %s" % arguments.archive)
+    dis("Table    : %s (%d correspondance(s) declaree(s))\n"
           % (arguments.map, len(table["mappings"])))
 
     identifiant, voie, explication = etablir_la_liaison(
         recu, arguments.archive, arguments.observation)
-    print("LIAISON  : %s" % voie.upper())
-    print("  %s" % explication)
+    dis("LIAISON  : %s" % voie.upper())
+    dis("  %s" % explication)
 
     rapport: dict[str, object] = {
         "schema": SCHEMA_RAPPORT,
@@ -508,7 +582,7 @@ def reconcilier(arguments: argparse.Namespace) -> tuple[dict, int]:
                      "confronter."}
             for e in table["mappings"]
         ]
-        print("\nAucune liaison : %d champ(s) ressortent NOT COMPARABLE."
+        dis("\nAucune liaison : %d champ(s) ressortent NOT COMPARABLE."
               % len(rapport["fields"]))
         return rapport, 0
 
@@ -516,27 +590,27 @@ def reconcilier(arguments: argparse.Namespace) -> tuple[dict, int]:
     frontieres = frontieres_de_comparabilite(table, nous)
     rapport["comparability_boundaries"] = frontieres
     if frontieres:
-        print("\nFRONTIERES DE COMPARABILITE -- evaluees AVANT les valeurs :")
+        dis("\nFRONTIERES DE COMPARABILITE -- evaluees AVANT les valeurs :")
         for f in frontieres:
-            print("  - %s" % f)
+            dis("  - %s" % f)
 
     # Ce que l appelant a reellement fourni. Un champ dont la verification
     # exige un materiau absent de cette liste ressort NOT VERIFIABLE.
     fournis = tuple(arguments.supplied or ())
     tolerance = arguments.tolerance
     if fournis:
-        print("\nmateriaux fournis : %s" % ", ".join(fournis))
-    print("\nCHAMP PAR CHAMP (tolerance numerique %.6g) :\n" % tolerance)
+        dis("\nmateriaux fournis : %s" % ", ".join(fournis))
+    dis("\nCHAMP PAR CHAMP (tolerance numerique %.6g) :\n" % tolerance)
     for entree in table["mappings"]:
         resultat = compare_un_champ(entree, recu, nous, tolerance, frontieres,
                                     fournis)
         rapport["fields"].append(resultat)
-        print("[%-14s] %-26s  recu=%-14s  nous=%s"
+        dis("[%-14s] %-26s  recu=%-14s  nous=%s"
               % (resultat["status"], entree["receipt_label"][:26],
                  str(resultat["receipt_value"])[:14],
                  str(resultat["neomundi_value"])[:20]))
         if resultat["status"] in (MISMATCHED, NOT_COMPARABLE):
-            print("                 %s" % resultat["note"][:140])
+            dis("                 %s" % resultat["note"][:140])
 
     rapport["contradictions_preserved"] = [
         {"receipt_label": f["receipt_label"], "neomundi_field": f["neomundi_field"],
@@ -550,12 +624,12 @@ def reconcilier(arguments: argparse.Namespace) -> tuple[dict, int]:
         decompte[f["status"]] = decompte.get(f["status"], 0) + 1
     rapport["counts"] = decompte
 
-    print("\nBILAN : " + ", ".join("%d %s" % (n, s) for s, n in sorted(decompte.items())))
+    dis("\nBILAN : " + ", ".join("%d %s" % (n, s) for s, n in sorted(decompte.items())))
     if rapport["contradictions_preserved"]:
-        print("\n%d contradiction(s) CONSERVEE(S), aucune tranchee :"
+        dis("\n%d contradiction(s) CONSERVEE(S), aucune tranchee :"
               % len(rapport["contradictions_preserved"]))
         for c in rapport["contradictions_preserved"]:
-            print("  %s : recu %r / nous %r  [%s]"
+            dis("  %s : recu %r / nous %r  [%s]"
                   % (c["receipt_label"], c["receipt_value"], c["neomundi_value"],
                      c["status"]))
 
@@ -566,11 +640,11 @@ def reconcilier(arguments: argparse.Namespace) -> tuple[dict, int]:
     code = 0
     if arguments.strict and (manquants or voie == "refusee"):
         code = 2
-        print("\nMODE STRICT : %d champ(s) non etabli(s), liaison %s."
+        dis("\nMODE STRICT : %d champ(s) non etabli(s), liaison %s."
               % (len(manquants), voie))
-        print("Aucun statut n a change : seul le code de sortie en tient compte (2).")
+        dis("Aucun statut n a change : seul le code de sortie en tient compte (2).")
     elif arguments.strict:
-        print("\nMODE STRICT : tous les champs sont etablis.")
+        dis("\nMODE STRICT : tous les champs sont etablis.")
     rapport["strict"] = bool(arguments.strict)
     rapport["required_not_established"] = manquants
     rapport["exit_code"] = code
@@ -646,6 +720,13 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(
         description="Reconcilie un recu externe avec une mesure NeoMundi."
     )
+    analyseur.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun "
+             "code de sortie, aucun nom de champ et aucune empreinte.",
+    )
     analyseur.add_argument("receipt", type=Path, help="le recu NORMALISE (JSON)")
     analyseur.add_argument("--archive", type=Path, required=True)
     analyseur.add_argument("--map", type=Path, required=True,
@@ -667,24 +748,25 @@ def main() -> int:
                            help="code 2 si un champ reste non etabli. Ne change "
                                 "AUCUN statut.")
     arguments = analyseur.parse_args()
+    _pose_langue(arguments)
 
     try:
         rapport, code = reconcilier(arguments)
     except (Illisible, bind.Illisible) as erreur:
-        print("[FAIL      ] %s" % erreur)
+        dis("[FAIL      ] %s" % erreur)
         return 1
     except OSError as erreur:
-        print("[FAIL      ] %s" % erreur)
+        dis("[FAIL      ] %s" % erreur)
         return 1
 
     if arguments.out:
         ecrire_markdown(rapport, arguments.out)
-        print("\nrapport Markdown : %s" % arguments.out)
+        dis("\nrapport Markdown : %s" % arguments.out)
     if arguments.json:
         arguments.json.parent.mkdir(parents=True, exist_ok=True)
         arguments.json.write_text(
             json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print("rapport JSON     : %s" % arguments.json)
+        dis("rapport JSON     : %s" % arguments.json)
     return code
 
 

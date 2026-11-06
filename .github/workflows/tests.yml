@@ -306,7 +306,7 @@ jobs:
               (["../../verify_attestation.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
                 "--archive", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
                 "--trust-store", "trust-store.json", "--allow-test-keys"],
-               "BILAN : 10 PASS, 0 FAIL, 4 NOT TESTED"),
+               "BILAN : 10 PASS, 0 FAIL, 5 NOT TESTED"),
               (["../../timestamp.py", "verify",
                 "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
                 "--subject", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",

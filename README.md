@@ -276,6 +276,9 @@ publisher.
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
 | [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
+| [`docs/V1_CLOSURE_PLAN.md`](docs/V1_CLOSURE_PLAN.md) | the closure plan for the remaining conditions, the order of work, and the verdicts |
+| [`docs/B1_EXPERIMENTAL_SIGNING_DECISION.md`](docs/B1_EXPERIMENTAL_SIGNING_DECISION.md) | B-1 — the experimental signing policy, as a decision sheet to approve |
+| [`docs/B2_KEY_CUSTODY_AND_ACTIVATION.md`](docs/B2_KEY_CUSTODY_AND_ACTIVATION.md) | B-2 — custody and activation of the real Ed25519 key, and why it is distinct from RGC |
 | [`docs/V1_QUALIFICATION.md`](docs/V1_QUALIFICATION.md) | the qualification sprint: the eight conditions, and two separate GO/NO-GO verdicts |
 | [`docs/SIGNING_POLICY.md`](docs/SIGNING_POLICY.md) | who commits, and the key's custody: the five roles, and why `compromised` invalidates the past |
 | [`docs/ADR-001-ANCHORING.md`](docs/ADR-001-ANCHORING.md) | ADR-001: the four time claims, and why a block height is not a date |

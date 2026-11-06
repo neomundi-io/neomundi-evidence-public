@@ -42,7 +42,15 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RACINE))
+import re as _re
+
 import i18n  # noqa: E402
+
+#: `[PASS      ] `, `[NOT TESTED] `, `[NOT COMPARABLE] ` en tete de ligne.
+#: Retire par MOTIF : rogner caractere par caractere mangeait la premiere
+#: lettre de la prose -- << AUCUNE >> devenait << UCUNE >> -- et produisait
+#: des faux positifs.
+_PREFIXE_ETAT = _re.compile(r"^\[[A-Z ]+\]\s*")
 
 _bilan: list[tuple[str, str, str]] = []
 
@@ -373,6 +381,162 @@ def main() -> int:
             for n in ("15", "16", "17", "18", "19", "20"):
                 pose(n, "attestation : garanties FR/EN", None,
                      "dossier de demonstration absent")
+
+        # ---- 21 a 24. LES SIX OUTILS, sur 17 scenarios ----------------
+        import zipfile
+
+        V = RACINE / "examples" / "dossier-v1"
+        W = RACINE / "examples" / "timestamp"
+        ATT = RACINE / "examples" / "attestation"
+
+        # Une archive fautive, pour exercer les chemins d echec.
+        mauvaise = travail / "mauvaise.zip"
+        with zipfile.ZipFile(archive) as z, zipfile.ZipFile(mauvaise, "w") as o:
+            for info in z.infolist():
+                d = z.read(info.filename)
+                if info.filename.endswith("measurements.jsonl"):
+                    d += b'\n{"bidon":1}\n'
+                o.writestr(info, d)
+
+        # Un manifeste de liaison, construit pour l occasion.
+        liaison = travail / "liaison"
+        liaison.mkdir()
+        shutil.copytree(str(RACINE / "examples" / "binding"), str(liaison / "b"),
+                        dirs_exist_ok=True) if (RACINE / "examples" / "binding").is_dir() else None
+
+        scenarios = [
+            ("verify valide", "verify.py", [archive] + (["--corpus", corpus] if corpus else [])),
+            ("verify fautif", "verify.py", [str(mauvaise)]),
+            ("attestation complete", "verify_attestation.py",
+             [str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws"),
+              "--archive", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip"),
+              "--trust-store", str(V / "trust-store.json"), "--allow-test-keys"]),
+            ("attestation nue", "verify_attestation.py",
+             [str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws")]),
+            ("timestamp inspect conf", "timestamp.py",
+             ["inspect", str(W / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.confirmed.ots")]),
+            ("timestamp inspect pend", "timestamp.py",
+             ["inspect", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots")]),
+            ("timestamp verify conf", "timestamp.py",
+             ["verify", str(W / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.confirmed.ots"),
+              "--subject", str(ATT / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws"),
+              "--descriptor",
+              str(W / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.confirmed.timestamp.json")]),
+            ("timestamp verify pend", "timestamp.py",
+             ["verify", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots"),
+              "--subject", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws"),
+              "--descriptor", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.timestamp.json")]),
+            ("timestamp verify nu", "timestamp.py",
+             ["verify", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots")]),
+            ("timestamp introuvable", "timestamp.py",
+             ["inspect", str(travail / "nexistepas.ots")]),
+            ("reconcile", "adapters/reconcile.py",
+             [str(V / "receipt-imported.json"),
+              "--archive", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip"),
+              "--map", str(V / "map-comparable.json")]),
+            ("reconcile sans contexte", "adapters/reconcile.py",
+             [str(V / "receipt-imported.json"),
+              "--archive", str(V / "NEOMUNDI_EVIDENCE_V1_DEMO.zip"),
+              "--map", str(V / "map-no-context.json")]),
+            ("receipt_import", "adapters/receipt_import.py",
+             [str(V / "receipt-synthetic.html"), "--received-at",
+              "2026-11-06T00:00:00Z", "--out", str(travail / "r.json")]),
+        ]
+
+        # LA REGLE DES DONNEES : ce qui figure verbatim dans une entree est
+        # une donnee. On rassemble le texte des entrees lisibles.
+        entrees = b""
+        for f in (V / "receipt-imported.json", V / "map-comparable.json",
+                  V / "map-no-context.json", V / "receipt-synthetic.html"):
+            if f.is_file():
+                entrees += f.read_bytes()
+        texte_entrees = entrees.decode("utf-8", "replace")
+
+        residus_outils: list[str] = []
+        codes_divergents: list[str] = []
+        donnees_intactes = 0
+        for titre, outil, args in scenarios:
+            cf, sf = lancer_outil(outil, [str(a) for a in args] + ["--lang", "fr"])
+            ce, se = lancer_outil(outil, [str(a) for a in args] + ["--lang", "en"])
+            if cf != ce:
+                codes_divergents.append("%s : fr=%d en=%d" % (titre, cf, ce))
+            for a, b in zip(sf.splitlines(), se.splitlines()):
+                if a.rstrip() != b.rstrip():
+                    continue
+                nettoye = _PREFIXE_ETAT.sub("", a.strip(), count=1)
+                for bout in nettoye.split(" - "):
+                    nu = bout.strip()
+                    if not i18n.residu(nu, i18n.EN):
+                        continue
+                    # La regle des donnees.
+                    if nu and nu[:40] in texte_entrees:
+                        donnees_intactes += 1
+                        continue
+                    residus_outils.append("%s : %s" % (titre, nu[:52]))
+
+        # ---- 21b. LE CONTROLE QUI MANQUAIT -----------------------------
+        #
+        # `residu` demande << traduisible ? >>, pas << traduite ? >>. Le
+        # 6 novembre `receipt_import.py` ne traduisait RIEN -- son
+        # `import i18n` echouait, parce que lance depuis `adapters/` la
+        # racine n est pas sur `sys.path` -- et le cas 21 le declarait
+        # conforme, puisque ses chaines etaient bien au catalogue.
+        #
+        # Celui-ci est une CONTRADICTION, pas une heuristique : le
+        # catalogue promet que la chaine change, et elle n a pas change.
+        non_traduits: list[str] = []
+        for titre, outil, args in scenarios:
+            _, sf = lancer_outil(outil, [str(a) for a in args] + ["--lang", "fr"])
+            _, se = lancer_outil(outil, [str(a) for a in args] + ["--lang", "en"])
+            for a, b in zip(sf.splitlines(), se.splitlines()):
+                a, b = a.rstrip(), b.rstrip()
+                if a != b:
+                    continue
+                nettoye = _PREFIXE_ETAT.sub("", a.strip(), count=1)
+                for bout in nettoye.split(" - "):
+                    nu = bout.strip()
+                    if i18n.devrait_changer(nu, i18n.EN):
+                        non_traduits.append("%s : %s" % (titre, nu[:50]))
+
+        pose("21b", "aucune chaine que le catalogue promet de traduire ne sort en francais",
+             not non_traduits,
+             "le catalogue et la sortie concordent"
+             if not non_traduits
+             else "%d chaine(s) NON TRADUITE(S) : %s"
+                  % (len(non_traduits), non_traduits[:2]))
+
+        pose("21", "les SIX outils : aucun residu francais en anglais",
+             not residus_outils,
+             "%d scenarios balayes" % len(scenarios) if not residus_outils
+             else "%d residu(s) : %s" % (len(residus_outils), residus_outils[:2]))
+
+        pose("22", "memes codes de sortie sur les %d scenarios" % len(scenarios),
+             not codes_divergents,
+             "aucun ecart" if not codes_divergents
+             else "; ".join(codes_divergents[:2]))
+
+        # ---- 23. la regle des donnees n est pas une echappatoire -------
+        # Il doit EXISTER du texte venu d une entree qui ressort inchange.
+        # Sans ce cas, << c est une donnee >> excuserait n importe quoi.
+        pose("23", "du texte venu d une ENTREE ressort inchange, et c est voulu",
+             donnees_intactes > 0,
+             "%d occurrence(s) conservee(s) verbatim" % donnees_intactes)
+
+        # ---- 24. les six outils exposent bien --lang -------------------
+        sans_option = []
+        for outil, sonde in (("verify.py", ["--help"]),
+                             ("verify_attestation.py", ["--help"]),
+                             ("timestamp.py", ["verify", "--help"]),
+                             ("bind.py", ["verify", "--help"]),
+                             ("sign.py", ["attest", "--help"]),
+                             ("adapters/reconcile.py", ["--help"]),
+                             ("adapters/receipt_import.py", ["--help"])):
+            _, aide = lancer_outil(outil, sonde)
+            if "--lang" not in aide:
+                sans_option.append(outil)
+        pose("24", "chaque outil expose --lang {fr,en}",
+             not sans_option,
+             "7 outils" if not sans_option else "sans option : %s" % sans_option)
 
     finally:
         shutil.rmtree(travail, ignore_errors=True)
