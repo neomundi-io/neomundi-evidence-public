@@ -119,6 +119,23 @@ def main() -> int:
              and c4 == 0 and c5 == 0,
              "deux chemins, meme niveau")
 
+        # ---- 4b. un calcul local n abaisse PAS le niveau ---------------
+        # Defaut constate le 6 novembre sur un vrai export Station : un
+        # signal sans modele -- un calcul local -- n a ni moteur ni prompt,
+        # et ses clefs de configuration ABSENTES sont correctes. Le compter
+        # comme non configure faisait retomber un `/3` complet en
+        # `instrument_declare`. Le generateur le masquait, parce qu il
+        # portait ces clefs a `null` au lieu de les omettre.
+        c4b, _, d4b = lire(exporter(travail, "calcul-local-sans-config"))
+        lc = next((l for l in d4b["lines"]
+                   if l["intitule"] == "configuration des evaluateurs"), {})
+        pose("4b", "un calcul local n abaisse pas le niveau",
+             c4b == 0
+             and d4b.get("provenance_level") == "instrument_declare_et_configure"
+             and "nuls sont CORRECTS" in lc.get("detail", "")
+             and d4b["chain"]["evaluator"]["calculs_locaux"] == ["stability_score"],
+             "niveau %s, local nomme" % d4b.get("provenance_level"))
+
         # ---- 5 et 6. les deux faces du meme defaut d empreinte ---------
         c6, s6, d6 = lire(exporter(travail, "empreinte-incoherente"))
         pose("5", "une empreinte incoherente est un FAIL",

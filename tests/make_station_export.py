@@ -29,6 +29,10 @@ LES PROFILS
   metadonnees-non-verifiables   des champs declares que rien ne permet de
                                 confronter -- et c est le cas NORMAL, pas un
                                 defaut : il doit ressortir DECLARE
+  calcul-local-sans-config      un calcul local qui OMET les clefs de
+                                configuration, au lieu de les porter a null.
+                                C est la forme d un vrai export, et elle a
+                                revele un defaut que ce generateur masquait
 
 Deterministe : aucune horloge, aucun alea. Bibliotheque standard seule.
 """
@@ -44,7 +48,8 @@ from pathlib import Path
 PROFILS = ("valide", "sans-couverture", "evaluateur-absent",
            "version-evaluateur-inconnue", "configuration-non-documentee",
            "empreinte-incoherente", "export-altere", "execution-partielle",
-           "signal-not-measured", "metadonnees-non-verifiables")
+           "signal-not-measured", "metadonnees-non-verifiables",
+           "calcul-local-sans-config")
 
 SIGNAUX = ("stability_score", "coherence_score", "semantic_risk",
            "factual_hallucination_score", "semantic_instability_score")
@@ -72,6 +77,13 @@ def _evaluateurs(profil: str) -> dict | None:
             "status": "measured",
             "reason": None,
         }
+        if profil == "calcul-local-sans-config" and calcul_local:
+            # Les clefs sont OMISES, pas mises a null : c est la forme qu un
+            # vrai export Station produit pour un calcul local, et elle doit
+            # etre lue comme << correct >> et non comme << non configure >>.
+            base[s] = {"evaluator": detail["evaluator"], "status": "measured",
+                       "reason": None}
+            continue
         if profil == "version-evaluateur-inconnue":
             # Nomme, et rien de plus : ni modele configure, ni empreinte.
             detail = {"evaluator": detail["evaluator"], "status": "measured",
