@@ -221,6 +221,35 @@ jobs:
         run: |
           python tests/test_completude.py
 
+      # B-1 : l entite emettrice est NeoMundi Recherche, en capacite
+      # `experimental` -- entite nommee, decision prise, et AUCUN pouvoir
+      # verifie. Cette suite verrouille les trois glissements possibles :
+      # lire `experimental` comme un `verified` plus faible, laisser une
+      # valeur declaree changer un verdict, et presenter une attestation
+      # experimentale comme une certification juridique.
+      - name: Suite de capacite -- declaree n est jamais verifiee
+        run: |
+          python tests/test_capacite.py
+
+      # B-2 : le registre des paquets signes, et l asymetrie entre une
+      # rotation et une compromission. Les cas 5 et 6 la mesurent sur la
+      # MEME attestation, inchangee a l octet : rotation -> PASS,
+      # compromission -> FAIL. Si les deux rendaient le meme verdict, l un
+      # des deux mecanismes serait faux.
+      - name: Suite de cles -- rotation, compromission, registre
+        run: |
+          python tests/test_cles.py
+
+      # C-5 : la barriere avant publication. Un auditeur telecharge le
+      # paquet ET le magasin depuis le MEME endroit ; qui controle cet
+      # endroit controle les deux. Le correctif est de publier l empreinte
+      # du magasin ailleurs -- et cette suite verifie que la charge du
+      # second canal ne porte AUCUN materiel de cle, et qu un audit en
+      # echec ne produit aucune charge.
+      - name: Suite de publication -- ce qui sort ne revient pas
+        run: |
+          python tests/test_publication.py
+
       # La langue ne doit changer que la prose. Un etat, un code de sortie,
       # un nom de champ ou une empreinte qui bouge avec la langue est un
       # defaut. Le cas 7 MESURE la couverture du catalogue au lieu de la

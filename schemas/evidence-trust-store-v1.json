@@ -149,11 +149,12 @@
           "legal_capacity_to_attest": {
             "enum": [
               "unverified",
+              "experimental",
               "verified",
               "disputed",
               "not_applicable"
             ],
-            "description": "DECLARED, never derived. The verifier reports this value and always returns NOT TESTED on legal capacity: no code can establish whether an entity may lawfully commit to an attestation. `not_applicable` for roles that commit to nothing, such as a technical operator."
+            "description": "DECLARED, never derived. The verifier reports this value and always returns NOT TESTED on legal capacity: no code can establish whether an entity may lawfully commit to an attestation. `not_applicable` for roles that commit to nothing, such as a technical operator. `experimental` is NOT a weaker `verified`: it states that the entity is named, that it has taken a documented decision to attest within a scientific and non-commercial scope, and that NO verification of its powers to commit has been performed. It is an identity DECLARED, never an identity legally VERIFIED, and an attestation made under it is never a legal certification."
           },
           "valid_from_declared": {
             "$ref": "#/$defs/instant"

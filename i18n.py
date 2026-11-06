@@ -400,6 +400,33 @@ EXACT: dict[str, str] = {
     "ancrage tiers": "third-party anchor",
     "attestation lisible": "attestation readable",
     "capacite juridique du signataire": "legal capacity of the signer",
+    # Le sens de chaque valeur de `legal_capacity_to_attest`. Ces chaines sont
+    # passees en argument a la ligne de controle : elles doivent etre au
+    # catalogue EXACT pour que `_argument_traduit` les rende en anglais.
+    "l entite est NOMMEE et a decide d attester dans un cadre scientifique "
+    "et non commercial ; AUCUNE verification de ses pouvoirs n a ete faite. "
+    "Identite DECLAREE, non juridiquement VERIFIEE : ceci n est pas une "
+    "certification juridique.":
+        "the entity is NAMED and has decided to attest within a scientific, "
+        "non-commercial scope; NO verification of its powers has been "
+        "performed. An identity DECLARED, not legally VERIFIED: this is not a "
+        "legal certification.",
+    "aucune verification des pouvoirs, et aucune decision documentee non "
+    "plus. Identite DECLAREE seulement.":
+        "no verification of powers, and no documented decision either. An "
+        "identity DECLARED only.",
+    "des pouvoirs ont ete verifies HORS de ce code, et ce champ n en est que "
+    "la declaration. Le verificateur ne refait pas ce controle.":
+        "powers were verified OUTSIDE this code, and this field is only the "
+        "declaration of it. The verifier does not redo that check.",
+    "la capacite est CONTESTEE. Lire l attestation comme engageante serait "
+    "abusif.":
+        "the capacity is DISPUTED. Reading the attestation as binding would "
+        "be improper.",
+    "ce role ne s engage sur rien ; la question ne se pose pas.":
+        "this role commits to nothing; the question does not arise.",
+    "valeur non connue de ce verificateur ; elle n est pas interpretee.":
+        "a value unknown to this verifier; it is not interpreted.",
     "concordance de la preuve d ancrage": "agreement of the anchor proof",
     "forme de l attestation": "attestation shape",
     "horodatage independant": "independent timestamp",
@@ -487,6 +514,59 @@ EXACT: dict[str, str] = {
         "No verdict changed: only the exit code accounts for it (2).",
     "MODE STRICT : toutes les garanties requises sont demontrees.":
         "STRICT MODE: every required guarantee is demonstrated.",
+    # B-2 : registre des paquets signes et cycle de vie des cles.
+    'deviendraient NON FIABLES retroactivement, quelle que soit leur date':
+        'would become UNTRUSTED retroactively, whatever date they declare.',
+    'declaree. Une rotation, elle, les laisserait de confiance.':
+        'A rotation, by contrast, would leave them trusted.',
+    '[note] AUCUN registre tenu. Sans `--register <fichier>`, rien ne':
+        '[note] NO register kept. Without `--register <file>`, nothing',
+    'consigne que cette cle a signe ce paquet -- et une':
+        'records that this key signed this package -- and a',
+    'compromission ne pourra pas etre circonscrite : elle':
+        'compromise could not be scoped: it would invalidate',
+    'invalidera TOUT ce que la cle a jamais signe.':
+        'EVERYTHING the key ever signed.',
+    '[FAIL] registre VIDE. Ce n est pas la preuve que la cle n a rien':
+        '[FAIL] register EMPTY. That is not proof the key signed nothing:',
+    'signe : c est l absence de toute information. Une':
+        'it is the absence of any information at all. A',
+    'compromission resterait non circonscrivable.':
+        'compromise would remain unscopable.',
+    'Aucune attestation consignee pour cette cle -- dans la limite de':
+        'No attestation recorded for this key -- within the limits of',
+    'ce registre, et de rien d autre.':
+        'this register, and nothing else.',
+    'Une ROTATION laisse les signatures anterieures DE CONFIANCE :':
+        'A ROTATION leaves earlier signatures TRUSTED:',
+    'une attestation declaree avant la rotation reste valide.':
+        'an attestation declared before the rotation stays valid.',
+    'Une COMPROMISSION est RETROACTIVE : toutes les signatures de':
+        'A COMPROMISE is RETROACTIVE: every signature made with this',
+    'cette cle deviennent non fiables, quelle que soit leur date':
+        'key becomes untrusted, whatever date it declares -- because',
+    'declaree -- parce qu un voleur choisit la date qu il ecrit.':
+        'a thief chooses the date they write.',
+    '[FAIL] une rotation exige `--successor <kid>`. Retirer une cle':
+        '[FAIL] a rotation requires `--successor <kid>`. Withdrawing a key',
+    'sans nommer celle qui la remplace est une revocation a sec.':
+        'without naming its replacement is a dry revocation.',
+    '[FAIL] `--successor` ne s applique pas a une compromission : une':
+        '[FAIL] `--successor` does not apply to a compromise: a compromised',
+    'cle compromise n est pas remplacee, elle est retiree, et':
+        'key is not replaced, it is withdrawn, and all of its',
+    'ses signatures anterieures tombent toutes.':
+        'earlier signatures fall with it.',
+    '[note] aucun registre fourni : la portee reste INCONNUE.':
+        '[note] no register supplied: the scope remains UNKNOWN.',
+    'la suite. Un remplacant doit etre utilisable.':
+        'over. A replacement must be usable.',
+    '[FAIL] cle %s deja COMPROMISE. Une compromission ne se requalifie pas en rotation : elle est retroactive et definitive.':
+        '[FAIL] key %s already COMPROMISED. A compromise is not requalified as a rotation: it is retroactive and final.',
+    '[FAIL] successeur %s ABSENT de ce magasin. Le generer et le publier d abord (genkey --append) : sinon tout consommateur se retrouve avec une cle a ne plus croire et aucune a croire.':
+        '[FAIL] successor %s ABSENT from this store. Generate and publish it first (genkey --append): otherwise every consumer is left with a key to distrust and none to trust.',
+    '[FAIL] `kid` %s DEJA present dans ce magasin. Un `kid` ne se reutilise jamais.':
+        '[FAIL] `kid` %s ALREADY present in this store. A `kid` is never reused.',
 }
 
 # --------------------------------------------------------------------------
@@ -877,11 +957,11 @@ FORMATS: dict[str, str] = {
         "anchor `%s` declared with status `%s`, and NO anchor verification is "
         "implemented in this repository. An unverified anchor is worth no "
         "more than a text field, and raises no level.",
-    "declaree `%s` pour %s (%s). Aucun code ne peut etablir qu une entite "
+    "declaree `%s` pour %s (%s) -- %s Aucun code ne peut etablir qu une entite "
     "peut legalement s engager : c est une question juridique, et elle reste "
     "ouverte.":
-        "declared `%s` for %s (%s). No code can establish that an entity may "
-        "legally commit: that is a legal question, and it remains open.",
+        "declared `%s` for %s (%s) -- %s No code can establish that an entity "
+        "may legally commit: that is a legal question, and it remains open.",
     "l attestation declare %s..., le fichier fourni se hache sur %s... : ce n "
     "est pas la preuve nommee.":
         "the attestation declares %s..., the supplied file hashes to %s...: "
@@ -974,6 +1054,37 @@ FORMATS: dict[str, str] = {
     "rapport lisible par machine : %s": "machine-readable report: %s",
     "MODE STRICT : %d garantie(s) requise(s) non demontree(s) :":
         "STRICT MODE: %d required guarantee(s) not demonstrated:",
+    # B-2 : registre des paquets signes et cycle de vie des cles.
+    'registre complete : %s':
+        'register appended : %s',
+    'registre : %s -- %d attestation(s) consignee(s)':
+        'register : %s -- %d attestation(s) recorded',
+    'cle       : %s -- %d concernee(s)':
+        'key      : %s -- %d affected',
+    'Si cette cle etait marquee `compromised`, ces %d attestation(s)':
+        'If this key were marked `compromised`, those %d attestation(s)',
+    'magasin ecrit : %s':
+        'store written : %s',
+    'cle retiree : %s -> `%s` le %s':
+        'key withdrawn : %s -> `%s` on %s',
+    'motif       : %s':
+        'reason        : %s',
+    'store_version            : %s':
+        'store_version            : %s',
+    '%s  bundle %s...  att %s...':
+        '%s  bundle %s...  att %s...',
+    '[FAIL] %s n est pas un magasin %s':
+        '[FAIL] %s is not a %s store',
+    '[FAIL] cle %s absente du magasin %s':
+        '[FAIL] key %s absent from store %s',
+    'remplacee par : %s':
+        'replaced by   : %s',
+    'Portee consignee : %d attestation(s) concernee(s).':
+        'Recorded scope : %d attestation(s) affected.',
+    '[FAIL] `--append` demande, mais %s n existe pas.':
+        '[FAIL] `--append` requested, but %s does not exist.',
+    '[FAIL] successeur %s de statut `%s` : il ne peut pas prendre':
+        '[FAIL] successor %s has status `%s`: it cannot take',
 }
 
 

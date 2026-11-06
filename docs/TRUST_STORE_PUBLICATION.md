@@ -149,15 +149,34 @@ B-1, not merely adjacent to it.
 
 ---
 
-## What remains to be built
+## Status at 6 November 2026
+
+B-1 is approved, and three rows of this table were stale.
 
 | Item | Status |
 |---|---|
-| `store_version` in `schemas/evidence-trust-store-v1.json` | **missing** — prerequisite |
-| A verifier line comparing the store's digest to a declared one | **not built** |
-| The `.org` publication page | **not built** |
-| The content audit, performed | **not done** |
-| Sign-off | **blocked on B-1** |
+| `store_version` in `schemas/evidence-trust-store-v1.json` | ✅ **present**, and required by the schema |
+| A verifier line comparing the store's digest to a declared one | ✅ **built** — `verify_attestation.py --store-digest`, three states |
+| The content audit, **tooled** | ✅ `publish_store.py audit` — six forbidden patterns, out-of-schema fields, test store refused |
+| The secondary channel's payload | ✅ `publish_store.py payload` — digest and version, **no key material** |
+| `genkey --append` and `retire` | ✅ a rotation requires a successor **already published** in the same store |
+| The `.org` publication page | ⏳ **not built** |
+| The content audit, **performed on the real store** | ⏳ there is no real store yet: the production key is not generated |
+| The publication itself | ⏳ **not done**, and it will not be without explicit approval |
 
-**C-5 is therefore not closeable before B-1.** Stating the design is the part
-that can be done now, and it is what this document is.
+### What the tooling deliberately does not do
+
+`publish_store.py` **has no network access**, and case 8 of
+[`tests/test_publication.py`](../tests/test_publication.py) verifies that
+statically, over its imports. It answers one question — *can this file be
+published as it stands?* — and builds the minimal payload. It publishes
+nothing.
+
+Nor can it **recognise a natural person's name**. It spots the structures
+where a name slips in — a `natural_person` identity, an out-of-schema field —
+and returns `NOT TESTED`, naming what a human must review. An audit claiming
+to settle that would return a `PASS` nobody earned.
+
+**C-5 therefore stays open, for one reason only: there is no production store
+to audit yet.** The design is stated, the barrier is built and tested, and
+the irreversible step is not taken.

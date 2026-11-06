@@ -475,18 +475,43 @@ def controle_confiance(bilan: Bilan, magasin: dict, entree_cle: dict,
     dire_pilier(bilan, PASS, INTITULE_CONFIANCE, detail)
 
 
+# Ce que chaque valeur declaree veut dire, mot pour mot. La distinction entre
+# une identite DECLAREE et une identite juridiquement VERIFIEE se perd des
+# qu on laisse le lecteur deduire le sens d un mot-cle : elle est donc ecrite.
+SENS_DE_LA_CAPACITE = {
+    "experimental":
+        "l entite est NOMMEE et a decide d attester dans un cadre scientifique "
+        "et non commercial ; AUCUNE verification de ses pouvoirs n a ete faite. "
+        "Identite DECLAREE, non juridiquement VERIFIEE : ceci n est pas une "
+        "certification juridique.",
+    "unverified":
+        "aucune verification des pouvoirs, et aucune decision documentee non "
+        "plus. Identite DECLAREE seulement.",
+    "verified":
+        "des pouvoirs ont ete verifies HORS de ce code, et ce champ n en est que "
+        "la declaration. Le verificateur ne refait pas ce controle.",
+    "disputed":
+        "la capacite est CONTESTEE. Lire l attestation comme engageante serait "
+        "abusif.",
+    "not_applicable":
+        "ce role ne s engage sur rien ; la question ne se pose pas.",
+}
+
+
 def controle_capacite_juridique(bilan: Bilan, magasin: dict, attestation: dict) -> None:
     """TOUJOURS NOT TESTED. Aucun code n etablit une capacite juridique."""
     signataire = (attestation.get("identities") or {}).get("signer")
     identites = {i.get("identity_id"): i for i in magasin.get("identities", [])
                  if isinstance(i, dict)}
     identite = identites.get(signataire) or {}
+    declaree = identite.get("legal_capacity_to_attest", "inconnue")
+    sens = SENS_DE_LA_CAPACITE.get(
+        declaree, "valeur non connue de ce verificateur ; elle n est pas interpretee.")
     bilan.dire(
         NOT_TESTED, "capacite juridique du signataire",
-        "declaree `%s` pour %s (%s). Aucun code ne peut etablir qu une entite peut "
-        "legalement s engager : c est une question juridique, et elle reste ouverte."
-        % (identite.get("legal_capacity_to_attest", "inconnue"), signataire,
-           identite.get("legal_name", "?")),
+        "declaree `%s` pour %s (%s) -- %s Aucun code ne peut etablir qu une entite "
+        "peut legalement s engager : c est une question juridique, et elle reste "
+        "ouverte." % (declaree, signataire, identite.get("legal_name", "?"), sens),
     )
 
 

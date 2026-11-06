@@ -158,15 +158,34 @@ C-5 dépendante de B-1, et pas seulement voisine.
 
 ---
 
-## Ce qui reste à construire
+## État au 6 novembre 2026
+
+B-1 est approuvée, et trois lignes de ce tableau étaient périmées.
 
 | Élément | État |
 |---|---|
-| `store_version` dans `schemas/evidence-trust-store-v1.json` | **manquant** — préalable |
-| Une ligne de vérificateur comparant l'empreinte du magasin à une empreinte déclarée | **non construite** |
-| La page de publication sur le `.org` | **non construite** |
-| L'audit de contenu, effectué | **non fait** |
-| La validation | **bloquée sur B-1** |
+| `store_version` dans `schemas/evidence-trust-store-v1.json` | ✅ **présent**, et exigé par le schéma |
+| Une ligne de vérificateur comparant l'empreinte du magasin à une empreinte déclarée | ✅ **construite** — `verify_attestation.py --store-digest`, trois états |
+| L'audit de contenu, **outillé** | ✅ `publish_store.py audit` — six motifs interdits, champs hors schéma, magasin de test refusé |
+| La charge du second canal | ✅ `publish_store.py payload` — empreinte et version, **aucun matériel de clé** |
+| `genkey --append` et `retire` | ✅ une rotation exige un successeur **déjà publié** dans le même magasin |
+| La page de publication sur le `.org` | ⏳ **non construite** |
+| L'audit de contenu, **effectué sur le magasin réel** | ⏳ il n'existe pas encore de magasin réel : la clé de production n'est pas générée |
+| La publication elle-même | ⏳ **non faite**, et elle ne le sera pas sans validation explicite |
 
-**C-5 n'est donc pas fermable avant B-1.** Énoncer la conception est la part
-qui peut se faire maintenant, et c'est ce que ce document est.
+### Ce que l'outillage ne fait pas, délibérément
+
+`publish_store.py` **n'a aucun accès réseau**, et le cas 8 de
+[`tests/test_publication.py`](../tests/test_publication.py) le vérifie
+statiquement sur ses imports. Il répond à une question — *ce fichier peut-il
+être publié tel quel ?* — et fabrique la charge minimale. Il ne publie rien.
+
+Il ne sait pas non plus **reconnaître le nom d'une personne physique**. Il
+repère les structures où un nom se glisse — une identité `natural_person`, un
+champ hors schéma — et rend `NOT TESTED` en nommant ce qu'un humain doit
+relire. Un audit qui prétendrait trancher cela rendrait un `PASS` que
+personne n'a mérité.
+
+**C-5 reste donc ouverte, et pour une seule raison : il n'y a pas encore de
+magasin de production à auditer.** La conception est énoncée, la barrière est
+construite et testée, et le geste irréversible n'est pas pris.

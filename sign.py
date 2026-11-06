@@ -135,6 +135,20 @@ SCHEMA_ATTESTATION = "neomundi.evidence.attestation/1"
 SCHEMA_MAGASIN = "neomundi.evidence.trust-store/1"
 ALG = "EdDSA"
 
+# La note consignee au registre doit dire ce que la valeur veut dire, et pas
+# la repeter : un magasin se lit sans son schema a cote.
+NOTE_PAR_CAPACITE = {
+    "unverified": "Capacite juridique a attester NON VERIFIEE a ce stade.",
+    "experimental":
+        "Entite NOMMEE, ayant decide d attester dans un cadre scientifique et non "
+        "commercial. AUCUNE verification de ses pouvoirs n a ete faite. Identite "
+        "declaree, non juridiquement verifiee : les attestations emises sous ce "
+        "statut ne sont pas des certifications juridiques.",
+    "verified": "Pouvoirs verifies HORS de ce code ; ce champ n en est que la "
+                "declaration.",
+    "disputed": "Capacite CONTESTEE. Ne pas lire les attestations comme engageantes.",
+}
+
 #: Racine du depot, pour la garde anti-divulgation ci-dessous.
 DEPOT = Path(__file__).resolve().parent
 
@@ -236,13 +250,13 @@ def genkey(arguments: argparse.Namespace) -> int:
                     "legal_name": arguments.signer_legal_name,
                     "kind": arguments.signer_kind,
                     "jurisdiction": arguments.signer_jurisdiction,
-                    "registration_reference": None,
+                    "registration_reference": arguments.signer_registration,
                     # Declare, jamais derive : aucun code ne peut etablir
                     # qu une entite peut legalement s engager.
-                    "legal_capacity_to_attest": "unverified",
+                    "legal_capacity_to_attest": arguments.signer_capacity,
                     "valid_from_declared": arguments.valid_from,
                     "superseded_by": None,
-                    "notes": "Capacite juridique a attester NON VERIFIEE a ce stade.",
+                    "notes": NOTE_PAR_CAPACITE[arguments.signer_capacity],
                 },
                 {
                     "identity_id": arguments.custodian,
@@ -305,6 +319,44 @@ def genkey(arguments: argparse.Namespace) -> int:
                 "La capacite juridique des identites est declaree, jamais verifiee par du code.",
             ],
         }
+        if arguments.append:
+            # Une rotation EXIGE que le successeur soit deja publie dans le
+            # MEME magasin -- sinon `retire --kind rotated` refuse, et il a
+            # raison. Sans ce chemin, la rotation serait impossible en
+            # pratique : `genkey` ecrirait toujours un magasin neuf.
+            if not arguments.trust_store_out.exists():
+                dis("[FAIL] `--append` demande, mais %s n existe pas."
+                    % arguments.trust_store_out)
+                return 1
+            existant = json.loads(arguments.trust_store_out.read_bytes())
+            if existant.get("schema") != SCHEMA_MAGASIN:
+                dis("[FAIL] %s n est pas un magasin %s"
+                    % (arguments.trust_store_out, SCHEMA_MAGASIN))
+                return 1
+            if any(c.get("kid") == arguments.kid for c in existant.get("keys", [])):
+                # La convention interdit de reutiliser un `kid`. Le relacher
+                # ici rendrait deux cles distinctes indiscernables dans le
+                # registre, et une compromission non circonscrivable.
+                dis("[FAIL] `kid` %s DEJA present dans ce magasin. Un `kid` ne "
+                    "se reutilise jamais." % arguments.kid)
+                return 1
+            existant["keys"].append(magasin["keys"][0])
+            connues = {i.get("identity_id") for i in existant.get("identities", [])}
+            for identite in magasin["identities"]:
+                if identite["identity_id"] not in connues:
+                    existant["identities"].append(identite)
+            # Monotone, et c est le nombre publie sur le second canal : il
+            # doit bouger a chaque changement, sinon un consommateur ne voit
+            # pas qu il tient une version perimee.
+            existant["store_version"] = int(existant.get("store_version", 1)) + 1
+            existant["updated_at_declared"] = arguments.valid_from
+            existant.setdefault("changes", []).append({
+                "at_declared": arguments.valid_from,
+                "what": "inscription de la cle %s" % arguments.kid,
+                "by_identity": arguments.custodian,
+            })
+            magasin = existant
+
         arguments.trust_store_out.parent.mkdir(parents=True, exist_ok=True)
         # LF explicite : voir la note sur `write_text` ci-dessus.
         arguments.trust_store_out.write_bytes(
@@ -312,6 +364,7 @@ def genkey(arguments: argparse.Namespace) -> int:
         )
         dis("magasin de confiance ecrit : %s" % arguments.trust_store_out)
         dis("  cle publique (x)         : %s" % b64u(brut_public))
+        dis("  store_version            : %s" % magasin.get("store_version"))
     return 0
 
 
@@ -440,6 +493,192 @@ def attest(arguments: argparse.Namespace) -> int:
     dis("independant. Verifier avec :")
     dis("  python verify_attestation.py %s --archive %s --trust-store <magasin>"
           % (arguments.out, arguments.archive))
+
+    if arguments.register:
+        inscrire_au_registre(arguments.register, arguments.attested_at, kid,
+                             str(sujet["bundle_sha256"]),
+                             sha256_fichier(arguments.out), arguments.operator)
+    else:
+        dis()
+        dis("[note] AUCUN registre tenu. Sans `--register <fichier>`, rien ne")
+        dis("       consigne que cette cle a signe ce paquet -- et une")
+        dis("       compromission ne pourra pas etre circonscrite : elle")
+        dis("       invalidera TOUT ce que la cle a jamais signe.")
+    return 0
+
+
+# --------------------------------------------------------------------------
+# Le registre des paquets signes, et le cycle de vie des cles.
+#
+# `SIGNING_POLICY.md` nommait ce registre manquant, et B-2 en fait un
+# PREREQUIS de la premiere attestation reelle, pas un suivi. La raison est
+# asymetrique : marquer une cle `compromised` invalide RETROACTIVEMENT tout
+# ce qu elle a signe, quelle que soit la date declaree -- parce qu un voleur
+# choisit la date qu il ecrit. Circonscrire est donc la seule chose qui
+# limite les degats, et on ne circonscrit que ce qu on a consigne.
+# --------------------------------------------------------------------------
+
+ENTETE_REGISTRE = (
+    "# Registre des paquets signes. HORS du depot public.\n"
+    "# attested_at_declared  kid  bundle_sha256  attestation_sha256  role_operateur\n"
+)
+
+
+def inscrire_au_registre(chemin: Path, instant: str, kid: str, bundle: str,
+                         attestation: str, operateur: str) -> None:
+    """Ajoute une ligne. APPEND-ONLY : on ne reecrit jamais ce fichier."""
+    refuse_dans_le_depot(chemin, "un registre de paquets signes")
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    neuf = not chemin.exists()
+    with chemin.open("a", encoding="utf-8", newline="\n") as f:
+        if neuf:
+            f.write(ENTETE_REGISTRE)
+        f.write("%s  %s  %s  %s  %s\n"
+                % (instant, kid, bundle, attestation, operateur))
+    dis()
+    dis("registre complete : %s" % chemin)
+
+
+def lire_registre(chemin: Path) -> list[dict[str, str]]:
+    lignes = []
+    for brute in chemin.read_text(encoding="utf-8").splitlines():
+        if not brute.strip() or brute.lstrip().startswith("#"):
+            continue
+        morceaux = brute.split()
+        if len(morceaux) < 4:
+            continue
+        lignes.append({
+            "attested_at_declared": morceaux[0], "kid": morceaux[1],
+            "bundle_sha256": morceaux[2], "attestation_sha256": morceaux[3],
+            "operateur": morceaux[4] if len(morceaux) > 4 else "?",
+        })
+    return lignes
+
+
+def scope(arguments: argparse.Namespace) -> int:
+    """Que faudrait-il reconsiderer si CETTE cle etait compromise ?"""
+    lignes = lire_registre(arguments.register)
+    vises = [l for l in lignes if l["kid"] == arguments.kid]
+    dis("registre : %s -- %d attestation(s) consignee(s)"
+        % (arguments.register, len(lignes)))
+    dis("cle       : %s -- %d concernee(s)" % (arguments.kid, len(vises)))
+    if not lignes:
+        dis()
+        dis("[FAIL] registre VIDE. Ce n est pas la preuve que la cle n a rien")
+        dis("       signe : c est l absence de toute information. Une")
+        dis("       compromission resterait non circonscrivable.")
+        return 1
+    if not vises:
+        dis()
+        dis("Aucune attestation consignee pour cette cle -- dans la limite de")
+        dis("ce registre, et de rien d autre.")
+        return 0
+    dis()
+    for l in vises:
+        dis("  %s  bundle %s...  att %s..."
+            % (l["attested_at_declared"], l["bundle_sha256"][:16],
+               l["attestation_sha256"][:16]))
+    dis()
+    dis("Si cette cle etait marquee `compromised`, ces %d attestation(s)"
+        % len(vises))
+    dis("deviendraient NON FIABLES retroactivement, quelle que soit leur date")
+    dis("declaree. Une rotation, elle, les laisserait de confiance.")
+    return 0
+
+
+def _charger_magasin(chemin: Path) -> dict:
+    magasin = json.loads(chemin.read_bytes())
+    if magasin.get("schema") != SCHEMA_MAGASIN:
+        dis("[FAIL] %s n est pas un magasin %s" % (chemin, SCHEMA_MAGASIN))
+        raise SystemExit(1)
+    return magasin
+
+
+def _ecrire_magasin(magasin: dict, sortie: Path) -> None:
+    sortie.parent.mkdir(parents=True, exist_ok=True)
+    sortie.write_bytes(
+        (json.dumps(magasin, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+
+
+def retirer_cle(arguments: argparse.Namespace) -> int:
+    """Rotation ou compromission. L ORDRE est contraint, et c est le coeur.
+
+    << Ne jamais revoquer a sec >> : generer le successeur, le publier dans
+    le magasin, puis seulement marquer le predecesseur. Une revocation dont
+    le remplacant n est pas publie laisse tout consommateur avec une cle a
+    ne plus croire et aucune a croire -- et le verificateur rendant
+    NOT TESTED sur une cle inconnue, la chaine perd un niveau en silence au
+    lieu d echouer franchement.
+    """
+    magasin = _charger_magasin(arguments.trust_store)
+    cles = {c.get("kid"): c for c in magasin.get("keys", []) if isinstance(c, dict)}
+
+    if arguments.kid not in cles:
+        dis("[FAIL] cle %s absente du magasin %s"
+            % (arguments.kid, arguments.trust_store))
+        return 1
+    sortante = cles[arguments.kid]
+
+    if sortante.get("status") == "compromised":
+        dis("[FAIL] cle %s deja COMPROMISE. Une compromission ne se "
+            "requalifie pas en rotation : elle est retroactive et definitive."
+            % arguments.kid)
+        return 1
+
+    if arguments.kind == "rotated":
+        successeur = arguments.successor
+        if not successeur:
+            dis("[FAIL] une rotation exige `--successor <kid>`. Retirer une cle")
+            dis("       sans nommer celle qui la remplace est une revocation a sec.")
+            return 1
+        if successeur not in cles:
+            dis("[FAIL] successeur %s ABSENT de ce magasin. Le generer et le "
+                "publier d abord (genkey --append) : sinon tout consommateur "
+                "se retrouve avec une cle a ne plus croire et aucune a croire."
+                % successeur)
+            return 1
+        remplacante = cles[successeur]
+        if remplacante.get("status") not in ("active", "test"):
+            dis("[FAIL] successeur %s de statut `%s` : il ne peut pas prendre"
+                % (successeur, remplacante.get("status")))
+            dis("       la suite. Un remplacant doit etre utilisable.")
+            return 1
+        sortante["superseded_by"] = successeur
+    elif arguments.successor:
+        dis("[FAIL] `--successor` ne s applique pas a une compromission : une")
+        dis("       cle compromise n est pas remplacee, elle est retiree, et")
+        dis("       ses signatures anterieures tombent toutes.")
+        return 1
+
+    sortante["status"] = arguments.kind
+    sortante["revocation"] = {
+        "kind": arguments.kind,
+        "at_declared": arguments.at,
+        "reason": arguments.reason,
+    }
+    magasin["updated_at_declared"] = arguments.at
+    _ecrire_magasin(magasin, arguments.out)
+
+    dis("magasin ecrit : %s" % arguments.out)
+    dis("  cle retiree : %s -> `%s` le %s"
+        % (arguments.kid, arguments.kind, arguments.at))
+    dis("  motif       : %s" % arguments.reason)
+    if arguments.kind == "rotated":
+        dis("  remplacee par : %s" % arguments.successor)
+        dis()
+        dis("Une ROTATION laisse les signatures anterieures DE CONFIANCE :")
+        dis("une attestation declaree avant la rotation reste valide.")
+    else:
+        dis()
+        dis("Une COMPROMISSION est RETROACTIVE : toutes les signatures de")
+        dis("cette cle deviennent non fiables, quelle que soit leur date")
+        dis("declaree -- parce qu un voleur choisit la date qu il ecrit.")
+        if arguments.register and arguments.register.exists():
+            vises = [l for l in lire_registre(arguments.register)
+                     if l["kid"] == arguments.kid]
+            dis("Portee consignee : %d attestation(s) concernee(s)." % len(vises))
+        else:
+            dis("[note] aucun registre fourni : la portee reste INCONNUE.")
     return 0
 
 
@@ -467,10 +706,24 @@ def main() -> int:
                    choices=("association", "company", "organisation", "natural_person",
                             "machine", "unassigned"))
     g.add_argument("--signer-jurisdiction", default=None)
+    g.add_argument("--signer-registration", default=None,
+                   metavar="RNA W563015824",
+                   help="reference publique d immatriculation, DECLAREE et jamais "
+                        "confrontee a un registre par ce code")
+    g.add_argument("--signer-capacity", default="unverified",
+                   choices=("unverified", "experimental", "verified", "disputed"),
+                   help="capacite juridique a attester, DECLAREE. `experimental` : "
+                        "entite nommee, decision prise, cadre non commercial, "
+                        "AUCUNE verification des pouvoirs. Jamais une certification "
+                        "juridique")
     g.add_argument("--custodian", default="nm-operator-poste")
     g.add_argument("--measurement-author", default="nm-station")
     g.add_argument("--valid-from", required=True, metavar="2026-11-05T00:00:00Z")
     g.add_argument("--key-notes", default="")
+    g.add_argument("--append", action="store_true",
+                   help="ajouter la cle a un magasin EXISTANT au lieu d en "
+                        "ecrire un neuf. Indispensable a une rotation : le "
+                        "successeur doit etre publie dans le meme magasin")
 
     a = sous.add_parser("attest", parents=[_PARENT], help="signer une attestation sur une archive")
     a.add_argument("--archive", type=Path, required=True)
@@ -490,11 +743,42 @@ def main() -> int:
     a.add_argument("--provenance", default=None)
     a.add_argument("--plan-anchor", action="store_true",
                    help="inscrire un ancrage tiers PREVU (n eleve aucun niveau)")
+    a.add_argument("--register", type=Path, default=None,
+                   help="registre des paquets signes, HORS du depot. Sans lui, "
+                        "une compromission ne pourra pas etre circonscrite")
+
+    r = sous.add_parser("retire", parents=[_PARENT],
+                        help="retirer une cle : rotation ou compromission")
+    r.add_argument("--trust-store", type=Path, required=True)
+    r.add_argument("--out", type=Path, required=True,
+                   help="magasin resultant ; l original n est jamais reecrit")
+    r.add_argument("--kid", required=True, help="la cle a retirer")
+    r.add_argument("--kind", required=True, choices=("rotated", "compromised"),
+                   help="`rotated` laisse les signatures anterieures de "
+                        "confiance ; `compromised` les invalide TOUTES, "
+                        "retroactivement")
+    r.add_argument("--successor", default=None,
+                   help="le `kid` qui prend la suite. EXIGE pour une rotation, "
+                        "et deja publie dans ce magasin")
+    r.add_argument("--at", required=True, metavar="2026-11-06T00:00:00Z",
+                   help="date DECLAREE du retrait")
+    r.add_argument("--reason", required=True, help="motif, en clair")
+    r.add_argument("--register", type=Path, default=None,
+                   help="pour circonscrire la portee d une compromission")
+
+    s = sous.add_parser("scope", parents=[_PARENT],
+                        help="ce qu une compromission de cette cle remettrait en cause")
+    s.add_argument("--register", type=Path, required=True)
+    s.add_argument("--kid", required=True)
 
     arguments = analyseur.parse_args()
     _pose_langue(arguments)
     if arguments.commande == "genkey":
         return genkey(arguments)
+    if arguments.commande == "retire":
+        return retirer_cle(arguments)
+    if arguments.commande == "scope":
+        return scope(arguments)
     return attest(arguments)
 
 
