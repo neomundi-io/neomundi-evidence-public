@@ -136,6 +136,47 @@ def main() -> int:
              and d4b["chain"]["evaluator"]["calculs_locaux"] == ["stability_score"],
              "niveau %s, local nomme" % d4b.get("provenance_level"))
 
+        # ---- 4c. une configuration PRESENTE et NULLE ------------------
+        # Le symetrique exact du cas 4b. Le niveau se calculait sur la
+        # PRESENCE des clefs de configuration, pas sur leurs valeurs : quatre
+        # nuls suffisaient a declarer un instrument << configure >>. Defaut
+        # constate le 6 novembre par le controle adversarial E de Q-1, sur une
+        # copie isolee d un export Station REEL.
+        #
+        # Si ce cas tombe, le produit sur-declare -- et c est le seul genre
+        # d erreur qu il existe pour refuser.
+        c4c, _, d4c = lire(exporter(travail, "configuration-nulle"))
+        lcn = next((l for l in d4c["lines"]
+                    if l["intitule"] == "configuration des evaluateurs"), {})
+        pose("4c", "une configuration nulle ne vaut pas configuree",
+             c4c == 0
+             and d4c.get("provenance_level") == "instrument_declare"
+             and d4c["chain"]["evaluator"]["configures"] == []
+             and "aucun" in lcn.get("detail", ""),
+             "niveau %s" % d4c.get("provenance_level"))
+
+        # ---- 4d. un signal mesure sans instrument declare -------------
+        # Troisieme face du meme defaut. Retirer une entree d `evaluators`
+        # ne faisait tomber aucun controle, et le niveau restait le plus
+        # haut : supprimer une entree genante ELEVAIT la completude
+        # apparente. Constate le 6 novembre par le controle adversarial D de
+        # Q-1, sur une copie isolee d un export Station REEL.
+        #
+        # A ne pas confondre avec le cas 3 : la, `evaluators` est absent
+        # dans son entier et le rapport rend NOT TESTED, parce qu une API
+        # anterieure ne le sert pas. Ici le membre documente quatre signaux
+        # sur cinq -- l export se contredit, et c est un FAIL.
+        c4d, s4d, d4d = lire(exporter(travail, "signal-sans-instrument"))
+        lsi = next((l for l in d4d["lines"]
+                    if l["intitule"] == "chaque signal mesure nomme son instrument"), {})
+        pose("4d", "un signal mesure sans instrument est un FAIL",
+             c4d == 1
+             and lsi.get("etat") == "FAIL"
+             and "semantic_risk" in lsi.get("detail", "")
+             and d4d.get("provenance_level") == "instrument_declare"
+             and d4d["chain"]["evaluator"]["mesures_sans_instrument"] == ["semantic_risk"],
+             "niveau %s" % d4d.get("provenance_level"))
+
         # ---- 5 et 6. les deux faces du meme defaut d empreinte ---------
         c6, s6, d6 = lire(exporter(travail, "empreinte-incoherente"))
         pose("5", "une empreinte incoherente est un FAIL",
