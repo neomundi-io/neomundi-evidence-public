@@ -24,12 +24,35 @@ les reponses disent elles-memes ce qu elles sont. Croiser son
 `extracted_answer` et son `status` ne revele rien, parce qu il n y a rien
 derriere.
 
-DETERMINISME
-------------
+DETERMINISME, ET PORTABILITE -- DEUX CHOSES DIFFERENTES
+-------------------------------------------------------
 
 Horodatages figes, `ZIP_STORED`, membres tries, `date_time` constant : deux
 executions rendent la MEME archive a l octet. Une empreinte instable
 ferait echouer la CI pour une raison qui n est pas un defaut du produit.
+
+Mais le determinisme n est pas la portabilite, et la confusion a coute une
+inreproductibilite silencieuse jusqu au 6 novembre. `zipfile.ZipInfo` met
+`create_system` a 0 sous Windows et a 3 ailleurs, et ce champ est ecrit dans
+le repertoire central : la MEME commande rendait donc deux archives
+differentes selon le systeme. L archive du dossier de revue, produite sous
+Windows, etait INREPRODUCTIBLE sous Linux -- alors que son guide promet le
+contraire a un relecteur.
+
+La CI ne l avait jamais vu : elle comparait deux generations SUR LA MEME
+MACHINE, ce qui eprouve le determinisme et pas la portabilite. C est le
+cas 1 de `test_completude.py`, qui confronte l empreinte a une CONSTANTE,
+qui l a fait apparaitre.
+
+`create_system` est desormais epingle a 0. Voir `_entree`, plus bas.
+
+LES DEUX PROFILS
+----------------
+
+`v2` est le defaut : le profil FIDELE, dont la forme suit celle d un export
+reel. `v1` reproduit l archive historique a l octet, parce qu une
+attestation Ed25519 et une ancre Bitcoin portent sur son empreinte --
+`--profile v1` existe pour que cette chaine de preuve reste verifiable.
 
 CE QUE LA FIXTURE COUVRE
 ------------------------
@@ -478,9 +501,30 @@ def construire(sortie: Path, profil: str = "v2") -> tuple[Path, Path]:
         "%s  %s\n" % (sha256(membres[n]), n) for n in couverts).encode("utf-8")
 
     archive = sortie / "NEOMUNDI_EVIDENCE_CI_FIXTURE.zip"
+    # `create_system` est le SEUL champ de l en-tete ZIP qui dependait de la
+    # plateforme : `zipfile.ZipInfo` le met a 0 sous Windows et a 3 ailleurs,
+    # et il est ecrit dans le repertoire central. La meme commande rendait
+    # donc deux archives differentes, et l archive du dossier de revue
+    # -- produite sous Windows, donc `create_system = 0` -- etait
+    # INREPRODUCTIBLE sous Linux.
+    #
+    # Trouve le 6 novembre par la CI, sur le cas 1 de `test_completude.py` :
+    # `9fcaf840...` au lieu de `e31e12bb...`. Rien ne l avait vu avant, parce
+    # que la CI ne comparait que deux generations SUR LA MEME MACHINE -- ce
+    # qui eprouve le determinisme, pas la portabilite.
+    #
+    # On l epingle a 0 : la valeur de l archive signee, donc son empreinte ne
+    # bouge pas, et un relecteur sous Linux la reproduit enfin. Le guide de
+    # l auditeur promet cette reproduction ; elle n etait vraie que pour
+    # nous.
+    def _entree(nom: str) -> zipfile.ZipInfo:
+        info = zipfile.ZipInfo(nom, date_time=DATE_ZIP)
+        info.create_system = 0
+        return info
+
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
         for nom in sorted(membres):
-            z.writestr(zipfile.ZipInfo(nom, date_time=DATE_ZIP), membres[nom])
+            z.writestr(_entree(nom), membres[nom])
 
     # --- de quoi eprouver la LIAISON ---------------------------------------
     # La suite de liaison a besoin d un repertoire d artefacts a part : le
