@@ -33,6 +33,14 @@ LES PROFILS
                                 configuration, au lieu de les porter a null.
                                 C est la forme d un vrai export, et elle a
                                 revele un defaut que ce generateur masquait
+  configuration-nulle           les quatre clefs de configuration PRESENTES
+                                et NULLES, sur des signaux qui ont pourtant
+                                un modele. Symetrique du profil precedent :
+                                la presence d une clef ne vaut pas sa valeur
+  signal-sans-instrument        la mesure publie cinq valeurs, `evaluators`
+                                n en nomme que quatre. Le membre EXISTE : ce
+                                n est pas le silence d une API anterieure,
+                                c est un export qui se contredit
 
 Deterministe : aucune horloge, aucun alea. Bibliotheque standard seule.
 """
@@ -49,7 +57,8 @@ PROFILS = ("valide", "sans-couverture", "evaluateur-absent",
            "version-evaluateur-inconnue", "configuration-non-documentee",
            "empreinte-incoherente", "export-altere", "execution-partielle",
            "signal-not-measured", "metadonnees-non-verifiables",
-           "calcul-local-sans-config")
+           "calcul-local-sans-config", "configuration-nulle",
+           "signal-sans-instrument")
 
 SIGNAUX = ("stability_score", "coherence_score", "semantic_risk",
            "factual_hallucination_score", "semantic_instability_score")
@@ -101,12 +110,26 @@ def _evaluateurs(profil: str) -> dict | None:
                 "inference_config_hash": None if calcul_local else "1" * 16,
                 "config_fingerprint": None if calcul_local else "2" * 16,
             })
+            if profil == "configuration-nulle":
+                # PRESENTES et NULLES. Une configuration vide n est pas une
+                # configuration, et le modele reste declare : c est ce qui
+                # rend ce profil different de `configuration-non-documentee`,
+                # ou les clefs sont absentes.
+                for champ in ("evaluator_runtime", "prompt_template_hash",
+                              "inference_config_hash", "config_fingerprint"):
+                    detail[champ] = None
         base[s] = detail
     # Deux signaux partagent un meme appel : le dire, sinon un lecteur
     # compte deux instruments la ou il n y en a qu un.
     partage = "evaluateur_de_demonstration.juge_partage"
     base["factual_hallucination_score"]["evaluator"] = partage
     base["semantic_instability_score"]["evaluator"] = partage
+    if profil == "signal-sans-instrument":
+        # La mesure publie bien les cinq valeurs ; `evaluators` n en nomme
+        # que quatre. Le membre existe et documente les autres, donc le
+        # rapport ne peut pas mettre ce trou sur le compte d une API
+        # anterieure.
+        base.pop("semantic_risk", None)
     return base
 
 

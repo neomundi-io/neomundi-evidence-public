@@ -341,7 +341,22 @@ def maillon_evaluateur(z: zipfile.ZipFile, mes_ids: set[str],
             continue
         for signal, detail in ev.items():
             if isinstance(detail, dict):
-                par_signal.setdefault(signal, set()).update(detail)
+                # Seules les clefs dont la valeur n est PAS nulle comptent.
+                #
+                # `set.update(detail)` versait les clefs d un dictionnaire
+                # sans regarder leurs valeurs : quatre champs de
+                # configuration a `null` suffisaient a faire declarer un
+                # instrument << configure >>. Defaut constate le 6 novembre
+                # par le controle adversarial E de Q-1.
+                #
+                # C est le SYMETRIQUE du defaut corrige plus bas : meme
+                # distinction, sens inverse. Un nul n est pas une valeur ; et
+                # une clef absente n est pas un trou quand le signal n a rien
+                # a documenter. Le signal reste NOMME dans les deux cas --
+                # `setdefault` cree l entree meme si l ensemble reste vide.
+                par_signal.setdefault(signal, set()).update(
+                    nom for nom, valeur in detail.items() if valeur is not None
+                )
 
     if not par_signal:
         bilan.dire(NOT_TESTED, INDEMONTRABLE, "identite des evaluateurs",
@@ -355,6 +370,34 @@ def maillon_evaluateur(z: zipfile.ZipFile, mes_ids: set[str],
     bilan.dire(NOT_TESTED, DECLARE, "identite des evaluateurs",
                "%d signal(aux) nomment leur evaluateur : %s. DECLARE par "
                "l API, conserve verbatim." % (len(nommes), ", ".join(nommes)))
+
+    # Un signal qui porte une VALEUR et qu `evaluators` ne nomme pas.
+    #
+    # Le membre de couverture existe et documente d autres signaux : ce n est
+    # donc pas le silence d une API anterieure -- traite plus haut, en
+    # NOT TESTED -- mais un export qui publie un resultat sans dire avec quoi
+    # il a ete obtenu. Les deux situations se ressemblent et ne se valent
+    # pas, et c est pourquoi ce controle est place APRES le retour du cas
+    # << aucun evaluateur >>.
+    #
+    # Defaut constate le 6 novembre par le controle adversarial D de Q-1 :
+    # retirer une entree ne faisait tomber aucun controle et le niveau
+    # restait le plus haut. Supprimer une entree genante ELEVAIT donc la
+    # completude apparente.
+    sans_instrument = sorted({
+        signal
+        for m in (charge(x) for x in lignes_jsonl(z, "measurements.jsonl"))
+        for signal, valeur in (m.get("signals") or {}).items()
+        if valeur is not None and signal not in par_signal
+    })
+    bilan.dire(PASS if not sans_instrument else FAIL, CONTROLE,
+               "chaque signal mesure nomme son instrument",
+               "tous les signaux portant une valeur sont nommes par "
+               "`evaluators`" if not sans_instrument else
+               "%d signal(aux) publient une valeur sans entree d evaluateur : "
+               "%s. Le membre de couverture en documente pourtant d autres : "
+               "l export se contredit."
+               % (len(sans_instrument), ", ".join(sans_instrument)))
 
     # Deux signaux peuvent partager un meme appel. Le dire, sinon un lecteur
     # compte deux instruments independants la ou il n y en a qu un.
@@ -427,11 +470,16 @@ def maillon_evaluateur(z: zipfile.ZipFile, mes_ids: set[str],
 
     # Le niveau le plus haut exige une configuration pour chaque signal QUI
     # A UN MODELE -- et rien pour ceux qui n en ont pas.
-    niveau = ("instrument_declare_et_configure" if configures and not nus
+    # `sans_instrument` plafonne aussi : on ne peut pas dire d un export
+    # qu il documente ET configure ses instruments quand l un des signaux
+    # mesures n en nomme aucun.
+    niveau = ("instrument_declare_et_configure"
+              if configures and not nus and not sans_instrument
               else "instrument_declare")
     return {"niveau": niveau, "couvertures": len(cov),
             "signaux_nommes": nommes, "configures": sorted(configures),
             "sans_configuration": sorted(nus),
+            "mesures_sans_instrument": sans_instrument,
             "calculs_locaux": sorted(locaux), "statuts": statuts,
             "evaluateurs_partages": partages}
 
