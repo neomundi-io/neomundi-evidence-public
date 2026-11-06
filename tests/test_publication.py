@@ -105,12 +105,42 @@ def main() -> int:
         brut = sortie.read_text(encoding="utf-8") if sortie.exists() else ""
         magasin = json.loads(prod.read_bytes())
         public = magasin["keys"][0]["x"]
+        # `x` est VOLONTAIREMENT absent, et c est la propriete qui compte :
+        # une charge qui porterait la cle publique deviendrait elle-meme une
+        # racine de confiance, et le second canal cesserait d etre un
+        # TEMOIN pour devenir une seconde source a surveiller.
         pose("4", "la charge ne porte aucun materiel de cle",
              code_c == 0 and public not in brut and '"d"' not in brut
              and set(charge) == {"schema", "store_id", "store_version",
                                  "store_kind", "sha256",
-                                 "updated_at_declared", "limits"},
+                                 "updated_at_declared", "signers", "keys",
+                                 "limits"},
              "%d champ(s), ni cle publique ni privee" % len(charge))
+
+        # ---- 4b. et elle porte bien l identite, le `kid` et le statut ---
+        # Un tiers doit pouvoir savoir CE QU IL regarde avant de telecharger
+        # le magasin : qui s engage, sous quel `kid`, et en quelle capacite.
+        sg = (charge.get("signers") or [{}])[0]
+        kx = (charge.get("keys") or [{}])[0]
+        pose("4b", "la charge nomme le signataire, le kid et la capacite",
+             sg.get("legal_name") == "NeoMundi Recherche"
+             and sg.get("registration_reference") == "RNA W563015824"
+             and sg.get("legal_capacity_to_attest") == "experimental"
+             and kx.get("kid") and kx.get("status")
+             and charge["schema"].endswith("/2"),
+             "%s / %s / %s" % (sg.get("identity_id"), kx.get("kid"),
+                               sg.get("legal_capacity_to_attest")))
+
+        # ---- 4c. la charge dit que l EMPREINTE fait foi ------------------
+        # Dupliquer des metadonnees sur deux canaux cree un risque de
+        # DIVERGENCE. La charge doit donc dire laquelle tranche, sinon un
+        # tiers pourrait croire la prose plutot que le hachage.
+        limites = " ".join(charge.get("limits") or [])
+        pose("4c", "la charge declare que l empreinte fait foi",
+             "EMPREINTE fait foi" in limites
+             and "informatives" in limites
+             and "certification juridique" in limites,
+             "divergence et capacite enoncees")
 
         # ---- 5. un scalaire prive glisse dans le magasin est vu --------
         fuite = travail / "fuite.json"
