@@ -119,6 +119,45 @@ The withheld records participate in the chain. That is the heart of it:
 
 ---
 
+## What this work found that the evaluation could not
+
+Two defects the ODA3 report does not contain, because both surfaced only
+while implementing its recommendations.
+
+### The archive was not reproducible outside Windows
+
+`zipfile.ZipInfo` sets `create_system` to **0 on Windows and 3 elsewhere**,
+and that field is written into the ZIP central directory. The same command
+therefore produced **two different archives** depending on the system.
+
+The V1 review dossier was produced on Windows. On Linux the generator
+returned `9fcaf840…` where the dossier carries `e31e12bb…` — the digest its
+Ed25519 attestation, its OpenTimestamps proof and its binding manifest all
+rest on. **A reviewer on Linux would have obtained a different digest and
+concluded, reasonably, that the package had been tampered with.** And the
+auditor's guide promises exactly that reproduction.
+
+Why nobody had seen it: CI compared **two generations on the same machine**.
+That exercises *determinism*; it says nothing about *portability*. The two
+were never the same property. The ODA3 evaluation could not see it either —
+it ran on Windows.
+
+`create_system` is now pinned to 0, the signed archive's value: its digest
+does not move, and a reviewer on Linux reproduces it at last.
+
+### A baseline only CI verifies is not verified
+
+Twice in this work, a figure that lived only in the CI workflow drifted and
+only CI noticed. Both are now in machine-readable descriptors — the
+fixture's `fixture.json`, the dossier's `attendu.json` — read by CI and
+**confronted with reality locally**, by cases 13 to 15 of the completeness
+suite.
+
+A descriptor that serves as CI's source of truth, and that nothing confronts
+with the real output, is a source of truth nobody verified.
+
+---
+
 ## The new guarantee, and its exact limits
 
 One control line, `completeness of the export`. What it establishes:

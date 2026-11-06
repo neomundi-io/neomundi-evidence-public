@@ -122,6 +122,46 @@ Les enregistrements retenus participent à la chaîne. C'est le fond du sujet :
 
 ---
 
+## Ce que ce travail a trouvé et que l'évaluation ne pouvait pas voir
+
+Deux défauts qui ne sont pas dans le rapport ODA3, parce que les deux sont
+apparus en appliquant ses recommandations.
+
+### L'archive n'était pas reproductible hors de Windows
+
+`zipfile.ZipInfo` met `create_system` à **0 sous Windows et à 3 ailleurs**,
+et ce champ est écrit dans le répertoire central du ZIP. La même commande
+rendait donc **deux archives différentes** selon le système.
+
+Le dossier de revue V1 a été produit sous Windows. Sous Linux, le générateur
+rendait `9fcaf840…` là où le dossier porte `e31e12bb…` — l'empreinte sur
+laquelle reposent son attestation Ed25519, sa preuve OpenTimestamps et son
+manifeste de liaison. **Un relecteur sous Linux aurait obtenu une empreinte
+différente et en aurait conclu, raisonnablement, que le dossier avait été
+altéré.** Et son guide lui promet exactement cette reproduction.
+
+Pourquoi personne ne l'avait vu : la CI comparait **deux générations sur la
+même machine**. Cela éprouve le *déterminisme* ; cela ne dit rien de la
+*portabilité*. Les deux n'ont jamais été la même propriété. L'évaluation
+ODA3 ne pouvait pas le voir non plus — elle a tourné sous Windows.
+
+`create_system` est désormais épinglé à 0, la valeur de l'archive signée :
+son empreinte ne bouge pas, et un relecteur sous Linux la reproduit enfin.
+
+### Une ligne de base que seule la CI vérifie n'est pas vérifiée
+
+Deux fois dans ce travail, un chiffre qui ne vivait que dans le workflow a
+dérivé et seule la CI l'a vu. Les deux sont désormais dans des descripteurs
+lisibles par machine — le `fixture.json` de la fixture, le `attendu.json` du
+dossier — lus par la CI et **confrontés au réel en local**, par les cas 13 à
+15 de la suite de complétude.
+
+Un descripteur qui sert de source de vérité à la CI, et que rien ne
+confronte à la sortie réelle, est une source de vérité que personne n'a
+vérifiée.
+
+---
+
 ## La garantie neuve, et ses limites exactes
 
 Une ligne de contrôle, `complétude de l'export`. Ce qu'elle établit :
