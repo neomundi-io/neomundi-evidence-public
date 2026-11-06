@@ -623,6 +623,38 @@ def upgrade(arguments: argparse.Namespace) -> int:
     print("\nnouvelle preuve : %s" % arguments.out)
     print("attestations Bitcoin : %d avant, %d apres" % (avant, apres))
     print("l ancienne preuve est INTACTE : %s" % arguments.proof)
+
+    # Le descripteur de la NOUVELLE preuve. Sans lui elle n est pas
+    # verifiable : `verify` compare `proof_sha256` a l empreinte du
+    # fichier, et une preuve upgradee en a forcement une autre.
+    if arguments.descriptor is not None:
+        # Les OCTETS : `json.loads` y detecte un BOM, sur du texte deja
+        # decode il echoue. `verify` lisait deja les octets ; cette
+        # ligne-ci, ecrite plus tard, ne le faisait pas.
+        ancien = json.loads(arguments.descriptor.read_bytes())
+        if ancien.get("subject_sha256") != engagee:
+            raise SystemExit(
+                "[FAIL] ce descripteur ne decrit pas cette preuve :\n"
+                "       il annonce le sujet %s\n"
+                "       la preuve engage     %s"
+                % (ancien.get("subject_sha256"), engagee)
+            )
+        descripteur = dict(ancien)
+        descripteur["proof_name"] = arguments.out.name
+        descripteur["proof_sha256"] = sha256_fichier(arguments.out)
+        # L anterieure n est jamais detruite : c est une piece a part.
+        descripteur["upgraded_from"] = sha256_fichier(arguments.proof)
+        # `state_at_stamping` dit l etat AU SCELLEMENT, et ne se reecrit
+        # pas : l etat courant se lit dans les octets de la preuve, jamais
+        # dans un descripteur. C est la regle de tout le produit.
+        chemin_d = (arguments.descriptor_out if arguments.descriptor_out
+                    else arguments.out.parent / (arguments.out.name + ".json"))
+        chemin_d.write_bytes(
+            (json.dumps(descripteur, ensure_ascii=False, indent=2,
+                        sort_keys=True) + "\n").encode("utf-8")
+        )
+        print("descripteur     : %s" % chemin_d)
+        print("  upgraded_from : %s" % descripteur["upgraded_from"])
     if apres == avant:
         print()
         print("Rien n a progresse : la transaction n est probablement pas encore")
@@ -676,6 +708,10 @@ def main() -> int:
     u.add_argument("--out", type=Path, required=True)
     u.add_argument("--force", action="store_true",
                    help="ecraser la sortie si elle existe ; par defaut refuse")
+    u.add_argument("--descriptor", type=Path, default=None,
+                   help="le descripteur de la preuve d origine. Fourni, un descripteur de la NOUVELLE preuve est ecrit, portant `upgraded_from`.")
+    u.add_argument("--descriptor-out", type=Path, default=None,
+                   help="ou ecrire ce descripteur ; par defaut a cote de la nouvelle preuve")
     u.add_argument("--timeout", type=int, default=15)
 
     arguments = analyseur.parse_args()

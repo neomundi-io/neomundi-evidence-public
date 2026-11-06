@@ -109,11 +109,24 @@ avant toute offre.
 | Attestation | clé de **test**, archives de démonstration | une clé de production, une custody réelle |
 | Horodatage | une preuve réelle, mais **`PENDING`** | une preuve **confirmée** |
 | Liaison | artefacts synthétiques | les artefacts d'un pilote |
-| Réconciliation | un reçu **inventé** | le reçu CP8, **non transmis** ; `RECONCILIATION.md`, **non fourni** |
+| Réconciliation | un reçu **inventé**, **et le vrai reçu CP8** | une archive portant une empreinte commune avec lui — voir plus bas |
 
-Et deux faits qu'il faut dire tels quels :
+Et trois faits qu'il faut dire tels quels :
 
-- **le dossier complet de Dennis Christie n'a pas été reçu** ;
+- **le dossier de Dennis Christie est arrivé le 5 novembre** —
+  `RECONCILIATION.md` et les deux reçus. Une édition antérieure de cette
+  fiche disait qu'il n'avait pas été reçu ; c'était vrai à l'écriture et ne
+  l'est plus. L'inventaire complet est la condition **D-7**, tenu en privé :
+  onze empreintes y sont **citées sans qu'aucun référent soit fourni**, et le
+  journal d'audit signé que le dossier tient pour canonique est
+  **irrécupérable chez nous** — notre propre page de vérification énonce que
+  le contenu d'un document n'est jamais conservé.
+- **un dossier réel et tiers a été éprouvé le 6 novembre** — 21 empreintes
+  déclarées recalculées, 21 concordantes. Le niveau `reference_verifiable`
+  est donc atteint sur des artefacts réels. Mais `verify.py` et `sign.py` le
+  **refusent** tous deux, et le second refus est juste : l'objet signé tire
+  `observation_count` d'un manifeste Evidence, et sur une archive étrangère
+  il signerait « 0 » au-dessus de sept observations.
 - **la capacité juridique du signataire n'est pas vérifiée**, et aucun code ne
   l'établira.
 

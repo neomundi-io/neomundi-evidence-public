@@ -34,6 +34,28 @@ import sys
 import zipfile
 from pathlib import Path
 
+# La traduction est OPTIONNELLE, et c est voulu : les 21 controles ne
+# doivent jamais dependre d elle. Sans `i18n.py` a cote, l outil tourne,
+# rend exactement les memes verdicts et le meme code de sortie -- en
+# francais. Un auditeur peut donc copier ce seul fichier.
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+        LANGUES = ("fr",)
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
 #: Les versions de schema d'export que ce verificateur sait lire. Une archive
 #: `/1` reste lisible : ses cinq membres sont un sous-ensemble des huit.
 #:
@@ -86,10 +108,25 @@ MOTIFS_INTERDITS = (
 PASS, FAIL, NOT_TESTED = "PASS", "FAIL", "NOT TESTED"
 
 
+def _dis(langue: str, format_fr: str, *arguments: object) -> None:
+    """Imprime une ligne de prose, dans `langue`.
+
+    Les etats, les empreintes et les decomptes passent par les arguments :
+    ils ne sont jamais traduits, seul le modele l est.
+    """
+    modele = i18n.traduire_format(format_fr, langue)
+    print(modele % arguments if arguments else modele)
+
+
 class Bilan:
     """Les resultats, et rien d'autre : aucun etat n'est deduit, chacun est dit."""
 
-    def __init__(self) -> None:
+    def __init__(self, langue: str = i18n.FR) -> None:
+        #: La langue d AFFICHAGE, et rien de plus. `self.lignes` stocke
+        #: toujours le francais : c est ce qui garantit que le mode strict,
+        #: le code de sortie et le rapport JSON ne dependent pas de la
+        #: langue, puisque tous trois lisent `self.lignes`.
+        self.langue = langue
         self.lignes: list[tuple[str, str, str]] = []
         #: Index des lignes dont le NOT TESTED est CONTINGENT -- celles qui
         #: deviendraient PASS si l appelant fournissait ce qui manque. On
@@ -108,7 +145,12 @@ class Bilan:
         if requis:
             self.requis.append(len(self.lignes))
         self.lignes.append((etat, controle, detail))
-        print("[%-10s] %s%s" % (etat, controle, " - " + detail if detail else ""))
+        # L etat n est JAMAIS traduit : `PASS`, `FAIL` et `NOT TESTED` sont
+        # des termes du contrat. Seules la prose de l intitule et celle du
+        # detail changent de langue.
+        vu = i18n.traduire(controle, self.langue)
+        vu_detail = i18n.traduire(detail, self.langue)
+        print("[%-10s] %s%s" % (etat, vu, " - " + vu_detail if vu_detail else ""))
 
     def requises_non_demontrees(self) -> list[str]:
         """Les garanties requises qui ne sont pas `PASS`."""
@@ -695,8 +737,10 @@ def deroule(bilan: Bilan, arguments: argparse.Namespace) -> None:
         bilan.dire(FAIL, "archive lisible", "%s introuvable" % arguments.archive)
         return
 
-    print("Dossier de preuve : %s" % arguments.archive)
-    print("empreinte de l archive : %s\n" % sha256_fichier(arguments.archive))
+    _dis(bilan.langue, "Dossier de preuve : %s", arguments.archive)
+    _dis(bilan.langue, "empreinte de l archive : %s",
+         sha256_fichier(arguments.archive))
+    print()
 
     try:
         archive = zipfile.ZipFile(arguments.archive)
@@ -758,6 +802,13 @@ def main() -> int:
     )
     analyseur.add_argument("archive", type=Path, help="l archive ZIP a verifier")
     analyseur.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    analyseur.add_argument(
         "--corpus",
         type=Path,
         default=None,
@@ -780,32 +831,37 @@ def main() -> int:
     )
     arguments = analyseur.parse_args()
 
-    bilan = Bilan()
+    bilan = Bilan(arguments.lang)
 
     deroule(bilan, arguments)
 
     # Un seul point de sortie : le bilan est rendu meme quand la sequence
     # s est arretee tot. Sans cela, un code de sortie 1 sans ligne BILAN est
     # indistinguable d un plantage de l outil.
-    print(
-        "\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
-        % (bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED))
-    )
+    print()
+    _dis(bilan.langue, "BILAN : %d PASS, %d FAIL, %d NOT TESTED",
+         bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED))
     if bilan.compte(FAIL):
-        print("Ce dossier ne doit pas etre presente comme verifie.")
+        _dis(bilan.langue, "Ce dossier ne doit pas etre presente comme verifie.")
 
     manquantes = bilan.requises_non_demontrees()
     if arguments.strict:
         if manquantes:
-            print(
-                "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
-                % len(manquantes)
-            )
+            print()
+            _dis(bilan.langue,
+                 "MODE STRICT : %d garantie(s) requise(s) non demontree(s) :",
+                 len(manquantes))
             for m in manquantes:
-                print("  - %s" % m)
-            print("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
+                # `manquantes` porte les intitules FRANCAIS, parce que
+                # `self.lignes` les stocke ainsi. Ils se traduisent ici,
+                # comme a l impression d une ligne de controle.
+                print("  - %s" % i18n.traduire(m, bilan.langue))
+            _dis(bilan.langue,
+                 "Aucun verdict n a change : seul le code de sortie en tient compte (2).")
         else:
-            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+            print()
+            _dis(bilan.langue,
+                 "MODE STRICT : toutes les garanties requises sont demontrees.")
 
     if arguments.json:
         # Les trois etats restent trois champs distincts : un consommateur qui
@@ -839,7 +895,7 @@ def main() -> int:
         arguments.json.write_text(
             json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        print("rapport lisible par machine : %s" % arguments.json)
+        _dis(bilan.langue, "rapport lisible par machine : %s", arguments.json)
 
     return bilan.code_de_sortie(arguments.strict)
 

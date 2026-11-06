@@ -276,6 +276,11 @@ publisher.
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
 | [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
+| [`docs/V1_QUALIFICATION.md`](docs/V1_QUALIFICATION.md) | the qualification sprint: the eight conditions, and two separate GO/NO-GO verdicts |
+| [`docs/SIGNING_POLICY.md`](docs/SIGNING_POLICY.md) | who commits, and the key's custody: the five roles, and why `compromised` invalidates the past |
+| [`docs/ADR-001-ANCHORING.md`](docs/ADR-001-ANCHORING.md) | ADR-001: the four time claims, and why a block height is not a date |
+| [`docs/TRUST_STORE_PUBLICATION.md`](docs/TRUST_STORE_PUBLICATION.md) | publishing the trust store on a second channel — design, and the content audit that gates it |
+| [`docs/I18N.md`](docs/I18N.md) | bilingual output: what `--lang` translates, what it never touches, and how coverage is measured |
 | [`docs/V1_CANDIDATE.md`](docs/V1_CANDIDATE.md) | the V1 candidate product sheet: demonstrated, pending, and not-validated guarantees |
 | [`docs/V1_REVIEW_PROTOCOL.md`](docs/V1_REVIEW_PROTOCOL.md) | the external review protocol, one scope per reviewer |
 | [`docs/ATTESTATION.md`](docs/ATTESTATION.md) | the signed attestation: how `cryptographically_attested` is reached, and the 23-case matrix |

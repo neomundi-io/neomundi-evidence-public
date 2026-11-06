@@ -155,7 +155,12 @@ def importer(octets: bytes, nom: str, recu_le: str) -> dict[str, object]:
             "recu de %d octets, au-dela du plafond de %d : non lu"
             % (len(octets), PLAFOND)
         )
-    texte = octets.decode("utf-8", "replace")
+    # Un BOM UTF-8 est retire POUR L ANALYSE SEULEMENT. `octets` reste
+    # intact : l empreinte doit rester celle du fichier tel qu il a ete
+    # transmis. 15 des 22 fichiers du dossier reel du 30 octobre en
+    # portent un, parce que PowerShell en met un.
+    utiles = octets[3:] if octets[:3] == b"\xef\xbb\xbf" else octets
+    texte = utiles.decode("utf-8", "replace")
 
     if nom.lower().endswith(".json"):
         try:

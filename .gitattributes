@@ -20,7 +20,7 @@
 # pas y toucher.
 *.jws -text
 *.ots -text
-*.jws.timestamp.json -text
+*.timestamp.json -text
 trust-store.json -text
 
 # Le dossier de revue V1 porte une chaine de preuve complete : ses

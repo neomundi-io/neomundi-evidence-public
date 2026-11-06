@@ -44,6 +44,14 @@ SUJET = RACINE / "examples" / "attestation" / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.j
 DESCRIPTEUR = (RACINE / "examples" / "timestamp"
                / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.timestamp.json")
 
+# La preuve REELLEMENT confirmee par la chaine, obtenue le 6 novembre :
+# blocs Bitcoin 974714 et 974715. Elle s eprouve hors ligne, sans aucune
+# dependance -- et c est la seule piece qui demontre C-4.
+CONFIRMEE = (RACINE / "examples" / "timestamp"
+             / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.confirmed.ots")
+CONFIRMEE_D = (RACINE / "examples" / "timestamp"
+               / "NEOMUNDI_EVIDENCE_DEMO_V0.1.zip.jws.confirmed.timestamp.json")
+
 MAGIE = bytes.fromhex("004f70656e54696d657374616d7073000050726f6f6600bf89e2e884e89294")
 
 
@@ -314,6 +322,45 @@ def main() -> int:
         else:
             pose("24", "meme confirmee, le temps n est jamais verifie ici", None,
                  "`opentimestamps` absent")
+
+        # ---- 26 a 29. la preuve REELLEMENT confirmee du depot --------
+        # Hors ligne, sans dependance. C est la piece de C-4 : tant qu elle
+        # n existait pas, << horodate >> n etait pas ecrivable.
+        import json as _json
+
+        code, s26 = verifier(CONFIRMEE, SUJET,
+                             ["--descriptor", str(CONFIRMEE_D)])
+        pose("26", "preuve REELLE confirmee : 5 PASS, 0 FAIL, 2 NOT TESTED",
+             code == 0
+             and "BILAN : 5 PASS, 0 FAIL, 2 NOT TESTED" in s26
+             and etat(s26, "attestation confirmee par la chaine") == "PASS",
+             "blocs Bitcoin lus dans les octets du depot")
+
+        # Un `upgrade` qui changerait l objet engage substituerait ce qui est
+        # atteste. Les deux preuves doivent engager le MEME.
+        _, i_pend = lancer(["inspect", str(PREUVE)])
+        _, i_conf = lancer(["inspect", str(CONFIRMEE)])
+
+        def _engagee(sortie: str) -> str:
+            for ligne in sortie.splitlines():
+                if "empreinte engagee" in ligne:
+                    return ligne.split(":")[-1].strip()
+            return ""
+
+        pose("27", "l upgrade n a PAS change l objet engage",
+             _engagee(i_pend) == _engagee(i_conf) != "",
+             "meme empreinte engagee de part et d autre")
+
+        d_conf = _json.loads(CONFIRMEE_D.read_text(encoding="utf-8"))
+        pose("28", "`upgraded_from` designe les octets de l anterieure",
+             d_conf.get("upgraded_from") == sha256(PREUVE.read_bytes()),
+             "l anterieure n est pas detruite : elle reste une piece")
+
+        pose("29", "confirmee, le TEMPS reste NON verifie et eIDAS NON revendique",
+             etat(s26, "temps verifie par un tiers") == "NOT TESTED"
+             and etat(s26, "qualification eIDAS") == "NOT TESTED"
+             and "ots verify" in s26,
+             "une attestation Bitcoin n est pas une date que NOUS verifions")
 
         # ---- 25. aucune primitive reseau dans le chemin de verification
         import ast

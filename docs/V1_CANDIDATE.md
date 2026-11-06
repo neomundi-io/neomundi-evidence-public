@@ -108,11 +108,23 @@ any offer.
 | Attestation | a **test** key, demonstration archives | a production key, a real custody |
 | Timestamping | a real proof, but **`PENDING`** | a **confirmed** proof |
 | Binding | synthetic artifacts | a pilot's artifacts |
-| Reconciliation | an **invented** receipt | the CP8 receipt, **not transmitted**; `RECONCILIATION.md`, **not supplied** |
+| Reconciliation | an **invented** receipt, **and the real CP8 receipt** | an archive bearing a digest in common with it — see below |
 
-And two facts to state as they are:
+And three facts to state as they are:
 
-- **Dennis Christie's complete package has not been received**;
+- **Dennis Christie's package arrived on 5 November** — `RECONCILIATION.md`
+  and both receipts. An earlier edition of this sheet said it had not been
+  received; that was true when written and is no longer. The complete
+  inventory is condition **D-7**, and it is kept privately: eleven digests
+  are **cited with no referent supplied**, and the signed audit trail the
+  package treats as canonical is **unrecoverable from us** — our own verify
+  page states that document content is never retained.
+- **A real third-party package was exercised on 6 November** — 21 declared
+  digests recomputed, 21 concordant. `reference_verifiable` is therefore
+  reached on real artifacts. But `verify.py` and `sign.py` both **refuse**
+  it, and the second refusal is correct: the signed subject reads
+  `observation_count` from an Evidence manifest, and over a foreign archive
+  it would sign `"0"` across seven observations.
 - **the signer's legal capacity is not verified**, and no code will establish
   it.
 
