@@ -2,6 +2,11 @@
 
 # Closure plan — the five remaining conditions
 
+> **Dated record of the morning of 6 November 2026.** Current status is in
+> [`V1_STATUS.md`](V1_STATUS.md): B-1 is since **resolved**, B-2 has its three
+> decisions. This document is not rewritten — rewriting a dated observation
+> would falsify a record.
+
 **6 November 2026.** Follows
 [`V1_QUALIFICATION.md`](V1_QUALIFICATION.md), which reported three
 conditions resolved, four partial, one blocked. Perimeter:

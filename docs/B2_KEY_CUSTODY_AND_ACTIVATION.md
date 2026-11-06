@@ -80,7 +80,7 @@ proposal to accept or amend.
 | Where does the secret live? | the operator workstation's **DPAPI store**, which binds it to that Windows user on that machine |
 | Who can read it? | the **technical operator** role of B-1 D-3, and nobody else |
 | Is there an off-machine backup? | **yes, required** |
-| Where is the backup? | an **offline medium**, physically separate from the workstation, holding the private key and its `kid` **and nothing else** |
+| Where is the backup? | **approved on 6 November**: a **dedicated encrypted USB medium**, off-machine, physically separate from the workstation, holding the private key and its `kid` **and nothing else** |
 | Who authorises a signature? | the **authorised representative** of B-1 D-2 |
 
 ### Why the backup is not optional, and why it is dangerous
@@ -211,24 +211,54 @@ because it is the part that carries consequences:
 
 ---
 
-## Acceptance
+## Acceptance — APPROVED on 6 November 2026
 
 ```
-C-1  The custody above is accepted / amended as follows:
+C-1  The custody above is ACCEPTED, with one rotation guard explicitly
+     approved:
 
-     ......................................................
+     NO key withdrawal without a successor PREVIOUSLY PUBLISHED in the
+     same store.
+
+     Tooled and exercised: `sign.py retire --kind rotated` refuses
+     without `--successor`, then refuses a successor absent from the
+     store. Cases 4, 5 and 6 of `tests/test_cles.py` lock it.
 
 C-2  The off-machine backup medium is:
 
-     ......................................................
+     a DEDICATED ENCRYPTED USB medium, off-machine, holding the private
+     key and its `kid` AND NOTHING ELSE.
+
+     "Dedicated" is a constraint, not an adjective: a medium shared
+     with anything else carries a manifest, a filename, a date --
+     enough to tell a thief what they are holding.
 
 C-3  The register of signed packages will be kept at:
 
-     ......................................................
-     (outside the public repository)
+     the VERSIONED private Evidence space, under `registre/`, with a
+     backup INDEPENDENT of the key's.
 
-     Date: ................   Signature: ................................
+     Outside the public repository, and the guard is hard: `sign.py`
+     refuses to write a register under the repository root (case 12).
+
+     Date: 6 November 2026   Direction decision.
 ```
 
-Until this block is filled in, **no key is generated**, and everything this
-product signs remains a demonstration.
+### Why the two backups stay separate
+
+The key and the register are backed up **independently**, and that is not
+belt-and-braces: putting them on one medium would hand a thief **both the
+secret and the list of what it opens**. The register names every signed
+package; the key signs more. One medium carrying both turns a theft into an
+undetectable substitution.
+
+### What remains, and that is all
+
+**The production key is not generated**, and this block being filled in does
+not generate it. It authorises the step; the step happens **offline, on the
+operator workstation**, network disconnected, per the Activation procedure —
+not in a working session, and not by an agent.
+
+Until then, everything this product signs remains a **demonstration**, and
+the verifier says so itself: a `test` key grants nothing without
+`--allow-test-keys`.

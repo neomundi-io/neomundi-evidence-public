@@ -2,6 +2,11 @@
 
 # Plan de clôture — les cinq conditions restantes
 
+> **Relevé daté du matin du 6 novembre 2026.** L'état courant est dans
+> [`V1_STATUS.fr.md`](V1_STATUS.fr.md) : B-1 est depuis **résolue**, B-2 a ses
+> trois décisions. Ce document n'est pas réécrit — réécrire une observation
+> datée falsifierait un enregistrement.
+
 **6 novembre 2026.** Suite de
 [`V1_QUALIFICATION.fr.md`](V1_QUALIFICATION.fr.md), qui rapportait trois
 conditions résolues, quatre partielles, une bloquée. Périmètre :
