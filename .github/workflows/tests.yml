@@ -310,19 +310,27 @@ jobs:
                                  text=True, encoding="utf-8", errors="replace")
               return r.stdout + r.stderr
 
+          # UNE SEULE source de verite : `attendu.json`, que
+          # `tests/test_completude.py` confronte a la realite au cas 15.
+          # Deux echecs de CI le 6 novembre viennent de chiffres qui
+          # n etaient verifies QUE par la CI.
+          import json
+          ATTENDU = json.loads(
+              open("attendu.json", encoding="utf-8").read())["attendu"]
+
           attendus = [
               (["../../verify.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
                 "--corpus", "corpus"],
-               "BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED"),
+               ATTENDU["verify_avec_corpus"]),
               (["../../verify_attestation.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
                 "--archive", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
                 "--trust-store", "trust-store.json", "--allow-test-keys"],
-               "BILAN : 10 PASS, 0 FAIL, 5 NOT TESTED"),
+               ATTENDU["attestation"]),
               (["../../timestamp.py", "verify",
                 "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.ots",
                 "--subject", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
                 "--descriptor", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws.timestamp.json"],
-               "BILAN : 4 PASS, 0 FAIL, 3 NOT TESTED"),
+               ATTENDU["horodatage"]),
           ]
           for args, attendu in attendus:
               sortie = lance(args)

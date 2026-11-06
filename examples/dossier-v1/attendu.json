@@ -1,0 +1,15 @@
+{
+  "schema": "neomundi.evidence.dossier-attendu/1",
+  "a_propos": "Les lignes de base que le guide de l auditeur annonce, sous forme lisible par machine. UNE SEULE source de verite : la CI les lit ici, et `tests/test_completude.py` verifie qu elles disent la realite. Deux echecs de CI le 6 novembre viennent de chiffres qui n etaient verifies QUE par la CI.",
+  "note_completude": "Ce dossier est ANTERIEUR au contrat de completude : son controle `completude de l export` vaut NOT TESTED, d ou 3 NOT TESTED et non 2. Ne pas confondre avec la fixture `v2`, qui declare le contrat et rend 20/0/2.",
+  "attendu": {
+    "verify_avec_corpus": "BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED",
+    "verify_sans_corpus": "BILAN : 17 PASS, 0 FAIL, 4 NOT TESTED",
+    "attestation": "BILAN : 10 PASS, 0 FAIL, 5 NOT TESTED",
+    "horodatage": "BILAN : 4 PASS, 0 FAIL, 3 NOT TESTED"
+  },
+  "empreintes": {
+    "archive": "e31e12bb7e32c7a33db1ecacc8c38cd18225fa10618c7e1aa5d6f9540f2ad7d6",
+    "attestation": "d533518f4413d75e7ea58923d21bfe6c168eba2f1cc6703dc12353abceda3493"
+  }
+}

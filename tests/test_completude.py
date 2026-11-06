@@ -256,6 +256,54 @@ def main() -> int:
                  not ecarts,
                  "les 2 valeurs concordent" if not ecarts else " ; ".join(ecarts))
 
+        # ---- 15. LE DOSSIER DE REVUE dit-il la verite ? ----------------
+        #
+        # Meme lecon que les cas 13 et 14, sur l autre objet. Les chiffres du
+        # dossier de revue etaient ecrits DANS le workflow de CI, et rien ne
+        # les confrontait localement : un remplacement global y a mis la
+        # ligne de base de la fixture `v2` a la place de la sienne, et seule
+        # la CI l a vu.
+        #
+        # Ils vivent desormais dans `examples/dossier-v1/attendu.json`, la
+        # CI les lit la, et ce cas verifie qu ils disent la realite.
+        dossier = RACINE / "examples" / "dossier-v1"
+        descr = dossier / "attendu.json"
+        if not descr.is_file():
+            pose("15", "le descripteur du dossier de revue dit la verite",
+                 None, "attendu.json absent")
+        else:
+            a = json.loads(descr.read_bytes())["attendu"]
+            archive_v1 = dossier / "NEOMUNDI_EVIDENCE_V1_DEMO.zip"
+
+            def bilan_de(args: list[str]) -> str:
+                fini = subprocess.run([sys.executable] + args, cwd=str(dossier),
+                                      capture_output=True, text=True,
+                                      encoding="utf-8", errors="replace")
+                sortie = (fini.stdout or "") + (fini.stderr or "")
+                return next((l for l in sortie.splitlines()
+                             if l.startswith("BILAN")), "aucun BILAN")
+
+            mesures = {
+                "verify_avec_corpus": bilan_de(
+                    ["../../verify.py", archive_v1.name, "--corpus", "corpus"]),
+                "verify_sans_corpus": bilan_de(
+                    ["../../verify.py", archive_v1.name]),
+                "attestation": bilan_de(
+                    ["../../verify_attestation.py", archive_v1.name + ".jws",
+                     "--archive", archive_v1.name,
+                     "--trust-store", "trust-store.json", "--allow-test-keys"]),
+                "horodatage": bilan_de(
+                    ["../../timestamp.py", "verify", archive_v1.name + ".jws.ots",
+                     "--subject", archive_v1.name + ".jws",
+                     "--descriptor", archive_v1.name + ".jws.timestamp.json"]),
+            }
+            ecarts = ["%s : descripteur %r, obtenu %r" % (k, a[k], v)
+                      for k, v in mesures.items() if a.get(k) != v]
+            pose("15", "le descripteur du dossier de revue dit la verite",
+                 not ecarts,
+                 "les 4 valeurs du guide concordent" if not ecarts
+                 else " ; ".join(ecarts[:2]))
+
     finally:
         shutil.rmtree(travail, ignore_errors=True)
 
