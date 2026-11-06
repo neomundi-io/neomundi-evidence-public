@@ -67,7 +67,7 @@ python ../../verify_attestation.py NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
     --trust-store trust-store.json --allow-test-keys
 ```
 
-**Expected: `10 PASS, 0 FAIL, 4 NOT TESTED`, level
+**Expected: `10 PASS, 0 FAIL, 5 NOT TESTED`, level
 `cryptographically_attested`.**
 
 Without `--allow-test-keys`, the demonstration key is **refused** — by
@@ -75,6 +75,25 @@ design: it must grant no attestation by default.
 
 Three lines stay `NOT TESTED` forever: the signer's **legal capacity**, the
 **independent timestamp**, and the **truth of the content**.
+
+A fourth is `NOT TESTED` **because you have not lifted it yet**: the trust
+store's digest has not been compared against anything. You downloaded the
+store and the package from the same place, so whoever controls that place
+controls both. Compare it against a digest you obtained **by another
+channel**:
+
+```sh
+python ../../verify_attestation.py NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
+    --archive NEOMUNDI_EVIDENCE_V1_DEMO.zip \
+    --trust-store trust-store.json --allow-test-keys \
+    --store-digest <the sha256 you obtained elsewhere>
+```
+
+That line then becomes `PASS` — or `FAIL`, which would be the interesting
+case. **No second channel is published yet** (condition C-5), so today the
+only digest you can obtain is the one you compute from the same file. Which
+proves nothing, and is exactly why the line defaults to `NOT TESTED` rather
+than `PASS`.
 
 ### 3 — Timestamping, and its real status
 

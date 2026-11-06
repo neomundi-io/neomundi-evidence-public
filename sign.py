@@ -289,6 +289,9 @@ def genkey(arguments: argparse.Namespace) -> int:
                     "notes": arguments.key_notes,
                 }
             ],
+            # Monotone, et EXIGE : c est le nombre publie sur le
+            # second canal, a cote de l empreinte du magasin.
+            "store_version": 1,
             "changes": [
                 {
                     "at_declared": arguments.valid_from,

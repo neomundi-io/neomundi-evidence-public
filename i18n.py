@@ -363,6 +363,14 @@ EXACT: dict[str, str] = {
     # ====================================================================
 
     # ---- intitules de controle ------------------------------------------
+    # ---- C-5 : la confrontation de l empreinte du magasin ---------------
+    "empreinte du magasin confrontee": "trust store digest compared",
+    "aucune empreinte fournie. La fournir avec --store-digest <sha256>, "
+    "obtenue par un AUTRE canal que celui qui a fourni le magasin. Un "
+    "magasin non confronte n est pas faux : il est non confronte.":
+        "no digest supplied. Supply it with --store-digest <sha256>, "
+        "obtained through a channel OTHER than the one that supplied the "
+        "store. An uncompared store is not false: it is uncompared.",
     "ancrage tiers": "third-party anchor",
     "attestation lisible": "attestation readable",
     "capacite juridique du signataire": "legal capacity of the signer",
@@ -843,6 +851,16 @@ FORMATS: dict[str, str] = {
         "the attestation declares a proof with digest %s...; supply it with "
         "--anchor-proof <file> to compare its bytes.",
     "preuve d ancrage introuvable : %s": "anchor proof not found: %s",
+    "les octets du magasin se hachent sur l empreinte annoncee par un "
+    "second canal (%s...). Un faussaire devrait compromettre les DEUX.":
+        "the store's bytes hash to the digest announced by a second channel "
+        "(%s...). A forger would have to compromise BOTH.",
+    "le magasin fourni se hache sur %s..., le second canal annonce %s... : "
+    "ce n est pas le meme magasin. Ne pas s en servir.":
+        "the supplied store hashes to %s..., the second channel announces "
+        "%s...: this is not the same store. Do not use it.",
+    "%s v%s, politique %s, %d cle(s), %d identite(s)":
+        "%s v%s, policy %s, %d key(s), %d identity(ies)",
     "role(s) non resolu(s) dans le magasin : %s":
         "role(s) unresolved in the store: %s",
     "schema %r inconnu ; attendu %r": "schema %r unknown; expected %r",

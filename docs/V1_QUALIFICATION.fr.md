@@ -124,7 +124,7 @@ relecteur seul.
 |---|---|
 | Intégrité d'un dossier, 21 contrôles, trois états jamais fusionnés | `19 PASS, 0 FAIL, 2 NOT TESTED` |
 | Vérification autonome, hors ligne, **sans dépendance**, et un seul fichier suffit | cas 10 de la suite FR/EN |
-| Attestation Ed25519, niveau `cryptographically_attested` atteint | 10 PASS, 4 NOT TESTED |
+| Attestation Ed25519, niveau `cryptographically_attested` atteint | 10 PASS, 5 NOT TESTED |
 | **Une preuve d'horodatage réellement confirmée par Bitcoin**, blocs 974714 / 974715 | `5 PASS, 0 FAIL, 2 NOT TESTED` |
 | Le cycle `PENDING` → confirmé, **visible aux deux bouts** | deux preuves côte à côte ; `--strict` rend 2 et 0 |
 | Un auditeur anglophone parvient à un verdict | `--lang en`, couverture mesurée |

@@ -69,7 +69,7 @@ python ../../verify_attestation.py NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
     --trust-store trust-store.json --allow-test-keys
 ```
 
-**Attendu : `10 PASS, 0 FAIL, 4 NOT TESTED`, niveau
+**Attendu : `10 PASS, 0 FAIL, 5 NOT TESTED`, niveau
 `cryptographically_attested`.**
 
 Sans `--allow-test-keys`, la clé de démonstration est **refusée** — c'est
@@ -77,6 +77,25 @@ voulu : elle ne doit accorder aucune attestation par défaut.
 
 Trois lignes restent `NOT TESTED` pour toujours : la **capacité juridique**
 du signataire, l'**horodatage indépendant**, et la **vérité du contenu**.
+
+Une quatrième est `NOT TESTED` **parce que vous ne l'avez pas encore
+levée** : l'empreinte du magasin de confiance n'a été confrontée à rien.
+Vous avez téléchargé le magasin et le dossier au même endroit, donc qui
+contrôle cet endroit contrôle les deux. Confrontez-la à une empreinte
+obtenue **par un autre canal** :
+
+```sh
+python ../../verify_attestation.py NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws \
+    --archive NEOMUNDI_EVIDENCE_V1_DEMO.zip \
+    --trust-store trust-store.json --allow-test-keys \
+    --store-digest <le sha256 obtenu ailleurs>
+```
+
+La ligne passe alors `PASS` — ou `FAIL`, qui serait le cas intéressant.
+**Aucun second canal n'est encore publié** (condition C-5), donc la seule
+empreinte que vous puissiez obtenir aujourd'hui est celle que vous calculez
+sur le même fichier. Ce qui ne prouve rien, et c'est précisément pourquoi la
+ligne vaut `NOT TESTED` par défaut et non `PASS`.
 
 ### 3 — Horodatage, et son statut réel
 

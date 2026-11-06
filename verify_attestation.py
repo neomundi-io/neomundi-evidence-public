@@ -678,6 +678,8 @@ def arguments_de_verification(
     anchor_proof: Path | None = None,
     json: Path | None = None,
     strict: bool = False,
+    store_digest: str | None = None,
+    lang: str = "fr",
 ) -> argparse.Namespace:
     """Le jeu d arguments complet de `verifier`, pour un appelant interne.
 
@@ -686,6 +688,12 @@ def arguments_de_verification(
     que seule la revue a vu. Une fabrique unique rend impossible qu un
     appelant oublie un champ -- un nouveau champ recoit son defaut ici, et
     tous les appelants en heritent.
+
+    Le piege s est REPRODUIT le 6 novembre : `--store-digest` et `--lang`
+    ont ete ajoutes a l analyseur sans passer ici, et `bind.py` est
+    retombe sur le meme AttributeError. La regle est donc : tout champ
+    ajoute a l analyseur de cet outil s ajoute AUSSI ici, dans le meme
+    geste. Le cas 9b de la suite d attestation le garde.
     """
     return argparse.Namespace(
         attestation=attestation,
@@ -695,6 +703,8 @@ def arguments_de_verification(
         anchor_proof=anchor_proof,
         json=json,
         strict=strict,
+        store_digest=store_digest,
+        lang=lang,
     )
 
 
@@ -744,9 +754,35 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, str | None, dict]:
         if magasin is not None:
             contexte["magasin"] = magasin
             bilan.dire(PASS, "magasin de confiance lisible",
-                       "%s, politique %s, %d cle(s), %d identite(s)"
-                       % (magasin.get("store_id"), POLITIQUE,
+                       "%s v%s, politique %s, %d cle(s), %d identite(s)"
+                       % (magasin.get("store_id"), magasin.get("store_version", "?"), POLITIQUE,
                           len(magasin["keys"]), len(magasin.get("identities", []))))
+
+            # C-5 : la confrontation a une empreinte obtenue AILLEURS. Sans
+            # elle, le magasin et le dossier arrivent par la MEME route, et
+            # qui controle cette route controle les deux.
+            attendue = (arguments.store_digest or "").strip().lower()
+            obtenue = sha256_fichier(arguments.trust_store)
+            if not attendue:
+                bilan.dire(
+                    NOT_TESTED, "empreinte du magasin confrontee",
+                    "aucune empreinte fournie. La fournir avec "
+                    "--store-digest <sha256>, obtenue par un AUTRE canal "
+                    "que celui qui a fourni le magasin. Un magasin non "
+                    "confronte n est pas faux : il est non confronte.",
+                    requis=True)
+            elif attendue == obtenue:
+                bilan.dire(
+                    PASS, "empreinte du magasin confrontee",
+                    "les octets du magasin se hachent sur l empreinte "
+                    "annoncee par un second canal (%s...). Un faussaire "
+                    "devrait compromettre les DEUX." % obtenue[:16])
+            else:
+                bilan.dire(
+                    FAIL, "empreinte du magasin confrontee",
+                    "le magasin fourni se hache sur %s..., le second canal "
+                    "annonce %s... : ce n est pas le meme magasin. Ne pas "
+                    "s en servir." % (obtenue[:16], attendue[:16]))
             entrees = {k["kid"]: k for k in magasin["keys"]}
             entree = entrees.get(attestation["key_id"])
             if entree is None:
@@ -882,6 +918,15 @@ def main() -> int:
                            help="accepter explicitement une cle de statut `test`")
     analyseur.add_argument("--json", type=Path, default=None, metavar="FICHIER",
                            help="ecrire aussi un rapport lisible par machine")
+    analyseur.add_argument(
+        "--store-digest",
+        metavar="SHA256",
+        default=None,
+        help="l empreinte du magasin de confiance, obtenue par un AUTRE "
+             "canal que celui qui a fourni le magasin. Sans elle, la ligne "
+             "reste NOT TESTED : un magasin non confronte n est pas faux, "
+             "il est simplement non confronte.",
+    )
     analyseur.add_argument(
         "--lang",
         choices=("fr", "en"),

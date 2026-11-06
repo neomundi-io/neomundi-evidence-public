@@ -121,7 +121,7 @@ reviewer alone.
 |---|---|
 | Package integrity, 21 controls, three never-merged states | `19 PASS, 0 FAIL, 2 NOT TESTED` |
 | Autonomous verification, offline, **no dependency**, and a single file is enough | case 10 of the i18n suite |
-| Ed25519 attestation, level `cryptographically_attested` reached | 10 PASS, 4 NOT TESTED |
+| Ed25519 attestation, level `cryptographically_attested` reached | 10 PASS, 5 NOT TESTED |
 | **A genuinely Bitcoin-confirmed timestamp proof**, blocks 974714 / 974715 | `5 PASS, 0 FAIL, 2 NOT TESTED` |
 | The `PENDING` → confirmed lifecycle, **visible at both ends** | two proofs side by side; `--strict` gives 2 and 0 |
 | An English-speaking auditor reaches a verdict | `--lang en`, coverage measured |
