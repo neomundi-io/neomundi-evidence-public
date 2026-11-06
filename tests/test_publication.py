@@ -172,6 +172,55 @@ def main() -> int:
         pose("9", "la charge se passe telle quelle a --store-digest",
              "[PASS" in ligne, ligne[:62] or "ligne absente")
 
+        # ---- 10b. un magasin `production` ne porte aucune cle `test` ---
+        # Constate le 6 novembre : basculer `store_kind` a `production` en
+        # laissant les cles au statut `test` passait cet audit. Le
+        # verificateur, lui, refuse ces cles -- on aurait donc publie une
+        # racine de confiance qui n accorde RIEN, et le defaut n aurait
+        # apparu qu au premier auditeur qui l essaie.
+        menteur = travail / "menteur.json"
+        d = json.loads(essai.read_bytes())
+        d["store_kind"] = "production"
+        menteur.write_bytes(
+            (json.dumps(d, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+        code_m, s_m = lancer("publish_store.py", ["audit", str(menteur)])
+        pose("10b", "un magasin de production sans aucune cle de test",
+             code_m == 1 and "cle(s) de statut `test`" in s_m
+             and "n accorde rien" in s_m,
+             "code %d" % code_m)
+
+        # ---- 10c. les identifiants sont confrontes au motif du schema ---
+        # Aucune validation de schema ne tourne dans ce depot : sans ce
+        # controle, un `identity_id` non conforme rend le magasin invalide
+        # EN SILENCE. La procedure operateur en produisait un.
+        tordu = travail / "tordu.json"
+        d2 = json.loads(prod.read_bytes())
+        d2["identities"][0]["identity_id"] = "NeoMundi Recherche"
+        d2["keys"][0]["signer_identity"] = "NeoMundi Recherche"
+        tordu.write_bytes(
+            (json.dumps(d2, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+        code_t, s_t = lancer("publish_store.py", ["audit", str(tordu)])
+        pose("10c", "un identifiant non conforme au schema est refuse",
+             code_t == 1 and "identifiants conformes au schema" in s_t
+             and "NeoMundi Recherche" in s_t,
+             "code %d" % code_t)
+
+        # ---- 10d. `unverified` sur un magasin de production est signale --
+        # Pas un FAIL : `unverified` reste une valeur legitime. Mais apres
+        # la decision B-1, c est le symptome d un `--signer-capacity`
+        # oublie -- exactement ce que produisait la procedure operateur.
+        oubli = travail / "oubli.json"
+        code_o, _ = lancer("sign.py", [
+            "genkey", "--kid", "nm-o1", "--out", str(travail / "ko.json"),
+            "--trust-store-out", str(oubli), "--store-kind", "production",
+            "--store-id", "neomundi-evidence",
+            "--valid-from", "2026-11-06T00:00:00Z"])
+        _, s_o = lancer("publish_store.py", ["audit", str(oubli)])
+        pose("10d", "`unverified` sur un magasin de production est signale",
+             code_o == 0 and "se publie en `unverified`" in s_o
+             and "oubli de" in s_o and "0 FAIL" in s_o,
+             "signale sans refuser")
+
         # ---- 10. une empreinte FAUSSE est refusee ----------------------
         _, s_m = lancer("verify_attestation.py", [
             str(jws), "--archive", str(archive), "--trust-store", str(prod),

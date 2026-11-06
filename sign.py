@@ -43,6 +43,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -197,7 +198,39 @@ def refuse_dans_le_depot(cible: Path, quoi: str) -> None:
 # --------------------------------------------------------------------------
 
 
+#: Le motif que le schema impose a `identity_id`. Repris ici parce qu aucune
+#: validation de schema ne tourne dans ce depot : sans ce controle, `genkey`
+#: ecrivait sans broncher un magasin NON CONFORME -- constate le 6 novembre
+#: en executant la procedure operateur telle qu elle etait ecrite, qui
+#: passait `--signer "NeoMundi Recherche"`. Un espace et deux majuscules, et
+#: le magasin devenait invalide en silence. C est le pire moment pour s en
+#: apercevoir : apres avoir genere la cle reelle.
+MOTIF_IDENTITE = re.compile(r"^[a-z0-9][a-z0-9-]{2,63}$")
+
+
+def _controle_identifiants(arguments: argparse.Namespace) -> list[str]:
+    """Les identifiants d identite sont-ils conformes au schema ?"""
+    fautifs = []
+    for option, valeur in (("--signer", arguments.signer),
+                           ("--custodian", arguments.custodian),
+                           ("--measurement-author", arguments.measurement_author)):
+        if not MOTIF_IDENTITE.match(valeur or ""):
+            fautifs.append("%s %r" % (option, valeur))
+    return fautifs
+
+
 def genkey(arguments: argparse.Namespace) -> int:
+    fautifs = _controle_identifiants(arguments)
+    if fautifs:
+        dis("[FAIL] identifiant(s) d identite non conforme(s) au schema : %s"
+            % ", puis ".join(fautifs))
+        dis("       Le motif est `^[a-z0-9][a-z0-9-]{2,63}$` : minuscules, "
+            "chiffres et tirets, sans espace.")
+        dis("       `--signer` est un IDENTIFIANT, pas une raison sociale : la "
+            "raison sociale est `--signer-legal-name`.")
+        dis("       Aucune cle n a ete generee.")
+        return 1
+
     refuse_dans_le_depot(arguments.out, "une cle privee")
 
     privee = ed25519.Ed25519PrivateKey.generate()

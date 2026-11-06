@@ -220,6 +220,24 @@ def main() -> int:
              % (apres_ajout.get("store_version"),
                 len(apres_ajout.get("changes", []))))
 
+        # ---- 10b. un identifiant non conforme REFUSE avant la generation
+        # La procedure operateur ecrite passait `--signer "NeoMundi
+        # Recherche"` -- une raison sociale la ou le schema attend un
+        # identifiant. `genkey` ecrivait sans broncher un magasin NON
+        # CONFORME, et aucune validation de schema ne tourne dans ce depot
+        # pour le dire. Le pire moment pour s en apercevoir serait apres
+        # avoir genere la cle reelle : d ou un refus AVANT toute ecriture.
+        avant = travail / "ne-doit-pas-naitre.json"
+        code_i, s_i = lancer("sign.py", [
+            "genkey", "--kid", "k9", "--out", str(avant),
+            "--signer", "NeoMundi Recherche",
+            "--signer-legal-name", "NeoMundi Recherche",
+            "--valid-from", "2026-11-06T00:00:00Z"] + commun[:-2])
+        pose("10b", "un identifiant non conforme refuse AVANT generation",
+             code_i == 1 and "non conforme" in s_i
+             and "Aucune cle n a ete generee" in s_i and not avant.exists(),
+             "aucun fichier de cle ecrit")
+
         # ---- 11. une cle privee ne s ecrit JAMAIS dans le depot -------
         code_d, s_d = lancer("sign.py", [
             "genkey", "--kid", "k-interdit",

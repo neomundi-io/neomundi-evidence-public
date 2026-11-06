@@ -125,20 +125,61 @@ is precisely the act this procedure exists to prevent.
 
 ### Step 1 — generation, offline
 
+> **Corrected on 6 November 2026.** The command previously written here was
+> run as an exercise and produced **a schema-invalid store, silently**: it
+> passed `--signer "NeoMundi Recherche"`, a legal name where the schema
+> expects an identifier (`^[a-z0-9][a-z0-9-]{2,63}$`). It also predated
+> `--signer-capacity`, so it declared `unverified` — **contradicting the B-1
+> decision** — with the word "experimental" only in a free-text note.
+>
+> `genkey` now **refuses** a non-conforming identifier before generating
+> anything, and the audit confronts the patterns. The command below is the
+> one that was exercised end to end.
+
 ```sh
 # on the operator workstation, network disconnected
 python sign.py genkey \
     --kid nm-ev-recherche-202611-1 \
-    --out <path OUTSIDE the repository> \
-    --trust-store-out <path> \
+    --out "<path OUTSIDE the repository>" \
+    --trust-store-out "<path>" \
     --store-kind production \
-    --signer "NeoMundi Recherche" \
+    --store-id neomundi-evidence \
+    --signer nm-recherche \
     --signer-legal-name "NeoMundi Recherche" \
     --signer-kind association \
     --signer-jurisdiction FR \
-    --valid-from <date of the B-1 approval> \
-    --key-notes "Experimental scope, non-commercial. legal_capacity_to_attest: experimental."
+    --signer-registration "RNA W563015824" \
+    --signer-capacity experimental \
+    --valid-from 2026-11-06T00:00:00Z \
+    --key-notes "Experimental scope, non-commercial."
 ```
+
+| Option | Why it is there, and what breaks without it |
+|---|---|
+| `--signer nm-recherche` | an **identifier**, not a legal name. `genkey` refuses anything else |
+| `--signer-legal-name` | the legal name. This is where "NeoMundi Recherche" belongs |
+| `--signer-registration` | RNA W563015824. **Declared**, never checked against a registry by this code |
+| `--signer-capacity experimental` | without it the store says `unverified`, which contradicts B-1 |
+| `--store-kind production` | sets the key's status to `active`. A `test` store would grant nothing |
+| `--valid-from` | the date of the B-1 approval. The tool never reads the clock |
+
+Expected output: three lines naming the private key file, the store, the
+public key `x`, and `store_version : 1`.
+
+**Then, immediately:**
+
+```sh
+python publish_store.py audit "<path to the store>"
+```
+
+Expected: **`7 PASS, 0 FAIL, 2 NOT TESTED`**, exit code `0`. The two
+`NOT TESTED` are the names of natural persons and the published legal
+capacity — neither is decidable by a program, and both are for a human to
+read.
+
+**If there is a single `FAIL`, stop.** Do not place the key in custody, and
+do not sign anything: the store would be published wrong, and a publication
+does not come back.
 
 Record: the `kid`, the public key `x`, the date, and the operator's role.
 **Never the private key, and never its path in a shared document.**
@@ -163,19 +204,37 @@ re-reading of every `notes` field, which is where internal context leaks.
 ### Step 4 — the first real attestation
 
 One package, chosen deliberately, with the representative's authorisation
-recorded. Then verify it the way an auditor would: offline, from the public
-key alone, and with `openssl pkeyutl -verify` as an independent second
-tool.
+recorded. **And `--register` from the very first signature**, decision C-3:
+
+```sh
+python sign.py attest \
+    --archive "<package.zip>" \
+    --key "<the private key>" \
+    --out "<package.zip.jws>" \
+    --attested-at "<ISO 8601 instant in Z>" \
+    --register "<...>/evidence-private/registre/signatures.txt"
+```
+
+Without `--register`, the tool signs **and says so**: nothing would record
+that this key signed this package, and a compromise would then invalidate
+everything it ever signed with no way to scope it. One signature with no
+trace is enough to lose that ability.
+
+Then verify it the way an auditor would: offline, from the public key alone,
+and with `openssl pkeyutl -verify` as an independent second tool.
 
 **If that verification does not pass, stop and do not sign a second
 package.**
 
 ---
 
-## The register that does not exist yet
+## The register — built on 6 November 2026
 
-`SIGNING_POLICY.md` named this missing and it still is: **no record of which
-packages were signed with which `kid`.**
+`SIGNING_POLICY.md` named this missing. **It no longer is:** `sign.py attest
+--register` writes it, `sign.py scope` reads it to scope a compromise, and
+decision C-3 gives it a versioned home outside the public repository.
+
+What the policy said about the need stays true word for word:
 
 Without it, a compromise cannot be scoped — and scoping is the only thing
 that limits the damage, because marking a key `compromised` invalidates

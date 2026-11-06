@@ -567,6 +567,52 @@ EXACT: dict[str, str] = {
         '[FAIL] successor %s ABSENT from this store. Generate and publish it first (genkey --append): otherwise every consumer is left with a key to distrust and none to trust.',
     '[FAIL] `kid` %s DEJA present dans ce magasin. Un `kid` ne se reutilise jamais.':
         '[FAIL] `kid` %s ALREADY present in this store. A `kid` is never reused.',
+    # Mission B-2 -> C-5 : gardes de genkey et barriere de publication.
+    'Le motif est `^[a-z0-9][a-z0-9-]{2,63}$` : minuscules, chiffres et tirets, sans espace.':
+        'The pattern is `^[a-z0-9][a-z0-9-]{2,63}$`: lowercase, digits and hyphens, no spaces.',
+    '`--signer` est un IDENTIFIANT, pas une raison sociale : la raison sociale est `--signer-legal-name`.':
+        '`--signer` is an IDENTIFIER, not a legal name: the legal name is `--signer-legal-name`.',
+    'Aucune cle n a ete generee.':
+        'No key was generated.',
+    'A publier sur le SECOND canal, et nulle part ailleurs. Ce programme':
+        'To be published on the SECOND channel, and nowhere else. This program',
+    'ne publie rien : il n a aucun acces reseau.':
+        'publishes nothing: it has no network access.',
+    'L auditeur confronte ensuite avec :':
+        'The auditor then confronts it with:',
+    'PUBLICATION REFUSEE. Aucun FAIL n est un avertissement ici : une':
+        'PUBLICATION REFUSED. No FAIL is a warning here: a publication is',
+    'publication est irreversible, et ce qui sort ne revient pas.':
+        'irreversible, and what leaves does not come back.',
+    'Aucun obstacle AUTOMATIQUE a la publication. Les NOT TESTED':
+        'No AUTOMATIC obstacle to publication. The NOT TESTED lines above',
+    'ci-dessus restent a relire par un humain : ce programme n a pas':
+        'remain for a human to review: this program has no verdict to',
+    'de verdict a rendre sur eux, et n en rend pas.':
+        'return on them, and returns none.',
+    '[FAIL] audit en echec : aucune charge n est produite. Lancer':
+        '[FAIL] audit failed: no payload is produced. Run',
+    '`audit` pour le detail.':
+        '`audit` for the detail.',
+    # Intitules de la barriere de publication (C-5).
+    'aucun materiel prive ni secret':
+        'no private material and no secret',
+    'store_version publiable':
+        'publishable store_version',
+    'nature du magasin':
+        'nature of the store',
+    'aucune cle de test dans un magasin de production':
+        'no test key in a production store',
+    'identifiants conformes au schema':
+        'identifiers conforming to the schema',
+    'capacite juridique publiee':
+        'published legal capacity',
+    'noms de personnes physiques':
+        'names of natural persons',
+    'schema du magasin':
+        'schema of the store',
+    'aucun champ hors schema':
+        'no field outside the schema',
 }
 
 # --------------------------------------------------------------------------
@@ -1085,6 +1131,53 @@ FORMATS: dict[str, str] = {
         '[FAIL] `--append` requested, but %s does not exist.',
     '[FAIL] successeur %s de statut `%s` : il ne peut pas prendre':
         '[FAIL] successor %s has status `%s`: it cannot take',
+    # Mission B-2 -> C-5 : gardes de genkey et barriere de publication.
+    '[FAIL] identifiant(s) d identite non conforme(s) au schema : %s':
+        '[FAIL] identity identifier(s) not conforming to the schema: %s',
+    'PUBLICATION REFUSEE : ce fichier porte %s. Une divulgation est irreversible.':
+        'PUBLICATION REFUSED: this file carries %s. A disclosure is irreversible.',
+    '%d motif(s) interdit(s) recherche(s), aucun trouve':
+        '%d forbidden pattern(s) searched for, none found',
+    'attendu %s, declare %r':
+        'expected %s, declared %r',
+    'version %d':
+        'version %d',
+    'absente ou invalide (%r). C est le nombre que le second canal porte : sans lui, un consommateur ne voit pas qu il tient une version perimee.':
+        'absent or invalid (%r). It is the number the second channel carries: without it, a consumer cannot see they hold a stale version.',
+    '`store_kind: test`. Le publier sur le canal officiel ferait passer pour une racine de confiance un magasin dont les cles n accordent rien.':
+        '`store_kind: test`. Publishing it on the official channel would present as a root of trust a store whose keys grant nothing.',
+    '`store_kind: %s`':
+        '`store_kind: %s`',
+    'champ(s) inattendu(s), vecteur de divulgation : %s':
+        'unexpected field(s), a disclosure vector: %s',
+    '%d identite(s) et %d cle(s) conformes':
+        '%d identity(ies) and %d key(s) conform',
+    'identite(s) de genre `natural_person` : %s. Un nom de personne n est pas a nous de le publier. A RELIRE par un humain -- ce programme ne sait pas reconnaitre un nom.':
+        "identity(ies) of kind `natural_person`: %s. A person's name is not ours to publish. TO BE REVIEWED by a human -- this program cannot recognise a name.",
+    'aucune identite `natural_person`. Ce n est pas la preuve qu aucun nom ne figure ailleurs : ce programme ne sait pas reconnaitre un nom, seulement les structures ou il se glisse.':
+        'no `natural_person` identity. That is not proof no name appears elsewhere: this program cannot recognise a name, only the structures one slips into.',
+    'cle(s) de statut `test` dans un magasin declare `%s` : %s. Le verificateur les refuse sans --allow-test-keys : publier ce magasin publierait une racine de confiance qui n accorde rien.':
+        'key(s) with status `test` in a store declared `%s`: %s. The verifier refuses them without --allow-test-keys: publishing this store would publish a root of trust that grants nothing.',
+    '%d cle(s) : %s':
+        '%d key(s): %s',
+    'non conforme(s) a `^[a-z0-9][a-z0-9-]{2,63}$` : %s. Le magasin est invalide, et rien d autre ne le dirait.':
+        'not conforming to `^[a-z0-9][a-z0-9-]{2,63}$`: %s. The store is invalid, and nothing else would say so.',
+    '%d identite(s) et %d cle(s)':
+        '%d identity(ies) and %d key(s)',
+    '%s se publie en `experimental` : entite nommee, aucun pouvoir verifie. La page du second canal doit le dire, et ne jamais presenter ces attestations comme des certifications juridiques.':
+        "%s is published as `experimental`: entity named, no powers verified. The second channel's page must say so, and must never present these attestations as legal certifications.",
+    '%s se publie en `unverified` : ni verification des pouvoirs, ni decision documentee. Si une decision a ete prise, c est `experimental` qu il faut declarer -- verifier que ce n est pas un oubli de `--signer-capacity`.':
+        '%s is published as `unverified`: neither a verification of powers nor a documented decision. If a decision was taken, `experimental` is what must be declared -- check this is not a forgotten `--signer-capacity`.',
+    '%s se publie en `%s`. A relire : cette valeur sera lue par un tiers comme la nature de l engagement.':
+        '%s is published as `%s`. To review: a third party will read this value as the nature of the commitment.',
+    'magasin   : %s':
+        'store     : %s',
+    'charge ecrite : %s':
+        'payload written : %s',
+    'python verify_attestation.py <att.jws> --trust-store <magasin> \\':
+        'python verify_attestation.py <att.jws> --trust-store <store> \\',
+    '--store-digest %s':
+        '--store-digest %s',
 }
 
 

@@ -131,20 +131,62 @@ est précisément l'acte que cette procédure existe pour empêcher.
 
 ### Geste 1 — génération, hors ligne
 
+> **Corrigée le 6 novembre 2026.** La commande écrite ici auparavant a été
+> exécutée en répétition et produisait **un magasin invalide au schéma, en
+> silence** : elle passait `--signer "NeoMundi Recherche"`, une raison
+> sociale là où le schéma attend un identifiant
+> (`^[a-z0-9][a-z0-9-]{2,63}$`). Elle était aussi antérieure à
+> `--signer-capacity`, donc elle déclarait `unverified` — **contredisant la
+> décision B-1** — avec le mot « experimental » dans une simple note.
+>
+> `genkey` **refuse** désormais un identifiant non conforme avant toute
+> génération, et l'audit confronte les motifs. La commande ci-dessous est
+> celle qui a été éprouvée de bout en bout.
+
 ```sh
 # sur le poste de l operateur, reseau deconnecte
 python sign.py genkey \
     --kid nm-ev-recherche-202611-1 \
-    --out <chemin HORS du depot> \
-    --trust-store-out <chemin> \
+    --out "<chemin HORS du depot>" \
+    --trust-store-out "<chemin>" \
     --store-kind production \
-    --signer "NeoMundi Recherche" \
+    --store-id neomundi-evidence \
+    --signer nm-recherche \
     --signer-legal-name "NeoMundi Recherche" \
     --signer-kind association \
     --signer-jurisdiction FR \
-    --valid-from <date de l approbation B-1> \
-    --key-notes "Perimetre experimental, non commercial. legal_capacity_to_attest: experimental."
+    --signer-registration "RNA W563015824" \
+    --signer-capacity experimental \
+    --valid-from 2026-11-06T00:00:00Z \
+    --key-notes "Perimetre experimental, non commercial."
 ```
+
+| Option | Pourquoi elle est là, et ce qui casse sans elle |
+|---|---|
+| `--signer nm-recherche` | un **identifiant**, pas une raison sociale. `genkey` refuse autre chose |
+| `--signer-legal-name` | la raison sociale. C'est là que « NeoMundi Recherche » appartient |
+| `--signer-registration` | RNA W563015824. **Déclaré**, jamais confronté à un registre par ce code |
+| `--signer-capacity experimental` | sans elle le magasin dit `unverified`, ce qui contredit B-1 |
+| `--store-kind production` | met le statut de la clé à `active`. Un magasin `test` n'accorderait rien |
+| `--valid-from` | la date de l'approbation B-1. L'outil ne lit jamais l'horloge |
+
+Sortie attendue : trois lignes nommant le fichier de clé privée, le magasin,
+la clé publique `x`, et `store_version : 1`.
+
+**Puis, immédiatement :**
+
+```sh
+python publish_store.py audit "<chemin du magasin>"
+```
+
+Attendu : **`7 PASS, 0 FAIL, 2 NOT TESTED`**, code de sortie `0`. Les deux
+`NOT TESTED` sont les noms de personnes physiques et la capacité juridique
+publiée — ni l'un ni l'autre n'est décidable par un programme, et les deux
+sont à lire par un humain.
+
+**S'il y a un seul `FAIL`, s'arrêter.** Ne pas mettre la clé en garde et ne
+rien signer : le magasin serait publié faux, et une publication ne revient
+pas.
 
 Consigner : le `kid`, la clé publique `x`, la date, et le rôle de
 l'opérateur. **Jamais la clé privée, et jamais son chemin dans un document
@@ -171,7 +213,16 @@ de chaque champ `notes`, là où le contexte interne fuit.
 ### Geste 4 — la première attestation réelle
 
 Un dossier, choisi délibérément, avec l'autorisation du représentant
-consignée. Puis le vérifier comme le ferait un auditeur : hors ligne, à
+consignée. **Et `--register` dès la première signature**, décision C-3 :
+
+```sh
+python sign.py attest     --archive "<dossier.zip>"     --key "<la cle privee>"     --out "<dossier.zip.jws>"     --attested-at "<instant ISO 8601 en Z>"     --register "<...>/evidence-private/registre/signatures.txt"
+```
+
+Sans `--register`, l'outil signe **et le dit** : rien ne consignerait que
+cette clé a signé ce paquet, et une compromission invaliderait alors tout ce
+qu'elle a jamais signé sans qu'on puisse en circonscrire la portée. Une
+seule signature sans trace suffit à perdre cette capacité. Puis le vérifier comme le ferait un auditeur : hors ligne, à
 partir de la seule clé publique, et avec `openssl pkeyutl -verify` comme
 second outil indépendant.
 
@@ -180,10 +231,14 @@ dossier.**
 
 ---
 
-## Le registre qui n'existe pas encore
+## Le registre — construit le 6 novembre 2026
 
-`SIGNING_POLICY.fr.md` le nommait manquant, et il l'est toujours : **aucune
-trace de quels dossiers ont été signés avec quel `kid`.**
+`SIGNING_POLICY.fr.md` le nommait manquant. **Il ne l'est plus :**
+`sign.py attest --register` l'écrit, `sign.py scope` le lit pour
+circonscrire une compromission, et la décision C-3 lui donne un foyer
+versionné hors du dépôt public.
+
+Ce que la politique disait du besoin reste vrai mot pour mot :
 
 Sans lui, une compromission ne peut pas être circonscrite — et la
 circonscrire est la seule chose qui en limite les dégâts, puisque marquer
