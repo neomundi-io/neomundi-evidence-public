@@ -375,19 +375,34 @@ def maillon_evaluateur(z: zipfile.ZipFile, mes_ids: set[str],
                                for k, v in partages.items()))
 
     # Configuration : documentee ou non, par signal, sans moyenne.
-    configures, nus = [], []
+    #
+    # Un signal dont AUCUNE couverture ne declare de modele est un calcul
+    # LOCAL : il n a ni moteur ni prompt, et ses champs de configuration
+    # absents sont CORRECTS. Le compter comme non configure plafonnait le
+    # niveau d un export pourtant complet -- defaut constate le 6 novembre
+    # sur un export Station reel, ou `stability_score` suffisait a faire
+    # retomber un `/3` documente en `instrument_declare`.
+    avec_modele: set[str] = set()
+    for c in cov:
+        for signal, detail in (c.get("evaluators") or {}).items():
+            if isinstance(detail, dict) and (detail.get("model_used")
+                                             or detail.get("model_configured")):
+                avec_modele.add(signal)
+    configures, nus, locaux = [], [], []
     for signal, champs in par_signal.items():
-        if set(CHAMPS_CONFIGURATION) & champs:
+        if signal not in avec_modele:
+            locaux.append(signal)
+        elif set(CHAMPS_CONFIGURATION) & champs:
             configures.append(signal)
         else:
             nus.append(signal)
     bilan.dire(NOT_TESTED, DECLARE, "configuration des evaluateurs",
-               "documentee pour %s ; AUCUN champ de configuration pour %s. "
-               "Un signal sans configuration n est pas pour autant un "
-               "evaluateur fautif : un calcul local n a ni modele ni prompt, "
-               "et ses nuls sont corrects."
+               "documentee pour %s ; declarant un modele SANS configuration : "
+               "%s ; calcul(s) local(aux), sans modele ni prompt, dont les "
+               "nuls sont CORRECTS : %s."
                % (", ".join(sorted(configures)) or "aucun",
-                  ", ".join(sorted(nus)) or "aucun"))
+                  ", ".join(sorted(nus)) or "aucun",
+                  ", ".join(sorted(locaux)) or "aucun"))
 
     # Statut d execution par evaluateur : present ou absent, jamais devine.
     statuts: dict[str, int] = {}
@@ -410,11 +425,14 @@ def maillon_evaluateur(z: zipfile.ZipFile, mes_ids: set[str],
                    "%d/%d couverture(s) ne portent aucun `evaluators`. Leur "
                    "silence n est pas un succes." % (sans_evaluateurs, len(cov)))
 
+    # Le niveau le plus haut exige une configuration pour chaque signal QUI
+    # A UN MODELE -- et rien pour ceux qui n en ont pas.
     niveau = ("instrument_declare_et_configure" if configures and not nus
               else "instrument_declare")
     return {"niveau": niveau, "couvertures": len(cov),
             "signaux_nommes": nommes, "configures": sorted(configures),
-            "sans_configuration": sorted(nus), "statuts": statuts,
+            "sans_configuration": sorted(nus),
+            "calculs_locaux": sorted(locaux), "statuts": statuts,
             "evaluateurs_partages": partages}
 
 
