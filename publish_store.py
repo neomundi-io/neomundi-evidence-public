@@ -63,6 +63,10 @@ except ImportError:  # pragma: no cover - chemin de degradation
 
 
 SCHEMA_MAGASIN = "neomundi.evidence.trust-store/1"
+
+#: Le motif que le schema impose a `identity_id` et que `kid` suit aussi.
+#: Aucune validation de schema ne tourne ici : ce controle est le seul.
+MOTIF_IDENTITE = re.compile(r"^[a-z0-9][a-z0-9-]{2,63}$")
 PASS, FAIL, NOT_TESTED = "PASS", "FAIL", "NOT TESTED"
 
 #: Champs admis au registre des identites et a celui des cles. Tout champ
@@ -113,11 +117,21 @@ class Bilan:
     """Trois etats, jamais confondus. `NOT TESTED` n est pas un `PASS`."""
 
     def __init__(self) -> None:
+        #: `self.lignes` stocke toujours le FRANCAIS : c est ce qui garantit
+        #: que le code de sortie n a aucune dependance a la traduction.
         self.lignes: list[tuple[str, str, str]] = []
 
     def dire(self, etat: str, intitule: str, detail: str) -> None:
         self.lignes.append((etat, intitule, detail))
-        dis("[%-10s] %s - %s" % (etat, intitule, detail))
+        # L intitule et le detail se traduisent SEPAREMENT, comme dans
+        # `verify_attestation.py`. Composer la ligne avant de la traduire
+        # ne la fait trouver sous aucune clef, et rendait une sortie
+        # MELANGEE sous `--lang en` -- constate le 6 novembre.
+        # L etat, lui, n est jamais traduit : les trois sont des termes du
+        # contrat.
+        vu = i18n.traduire(intitule, _LANGUE[0])
+        vu_detail = i18n.traduire(detail, _LANGUE[0])
+        print("[%-10s] %s%s" % (etat, vu, " - " + vu_detail if vu_detail else ""))
 
     def compte(self, etat: str) -> int:
         return sum(1 for e, _, _ in self.lignes if e == etat)
@@ -211,16 +225,67 @@ def auditer(magasin: dict, octets: bytes, bilan: Bilan) -> None:
                    "pas reconnaitre un nom, seulement les structures ou il "
                    "se glisse.")
 
-    # ---- 6. la capacite juridique, telle que declaree -------------------
+    # ---- 6. une cle de TEST ne se publie pas comme racine de confiance ---
+    # Constate le 6 novembre : un magasin dont on bascule `store_kind` a
+    # `production` en laissant ses cles au statut `test` passait cet audit.
+    # Le verificateur, lui, refuse ces cles -- donc on aurait publie une
+    # racine de confiance qui n accorde rien, et dont le defaut n apparait
+    # qu au premier auditeur qui l essaie.
+    statuts = [(c.get("kid"), c.get("status")) for c in magasin.get("keys", [])]
+    de_test = [k for k, s in statuts if s == "test"]
+    if genre != "test" and de_test:
+        bilan.dire(FAIL, "aucune cle de test dans un magasin de production",
+                   "cle(s) de statut `test` dans un magasin declare `%s` : %s. "
+                   "Le verificateur les refuse sans --allow-test-keys : publier "
+                   "ce magasin publierait une racine de confiance qui n accorde "
+                   "rien." % (genre, ", ".join(de_test)))
+    else:
+        bilan.dire(PASS, "aucune cle de test dans un magasin de production",
+                   "%d cle(s) : %s" % (len(statuts),
+                                       ", ".join("%s=%s" % (k, s) for k, s in statuts)
+                                       or "aucune"))
+
+    # ---- 7. les identifiants sont conformes au schema -------------------
+    # Aucune validation de schema ne tourne dans ce depot. Un `identity_id`
+    # non conforme rend le magasin invalide en silence, et la procedure
+    # operateur en produisait un : `--signer "NeoMundi Recherche"`.
+    fautifs = [i.get("identity_id") for i in magasin.get("identities", [])
+               if not MOTIF_IDENTITE.match(str(i.get("identity_id") or ""))]
+    fautifs += ["cle %s" % c.get("kid") for c in magasin.get("keys", [])
+                if not MOTIF_IDENTITE.match(str(c.get("kid") or ""))]
+    if fautifs:
+        bilan.dire(FAIL, "identifiants conformes au schema",
+                   "non conforme(s) a `^[a-z0-9][a-z0-9-]{2,63}$` : %s. Le "
+                   "magasin est invalide, et rien d autre ne le dirait."
+                   % ", ".join(str(f) for f in fautifs))
+    else:
+        bilan.dire(PASS, "identifiants conformes au schema",
+                   "%d identite(s) et %d cle(s)"
+                   % (len(magasin.get("identities", [])), len(statuts)))
+
+    # ---- 8. la capacite juridique, telle que declaree -------------------
+    signataires = [c.get("signer_identity") for c in magasin.get("keys", [])]
     for identite in magasin.get("identities", []):
-        if identite.get("legal_capacity_to_attest") == "experimental":
-            bilan.dire(NOT_TESTED, "capacite juridique publiee",
-                       "%s se publie en `experimental` : entite nommee, "
-                       "aucun pouvoir verifie. La page du second canal doit "
-                       "le dire, et ne jamais presenter ces attestations "
-                       "comme des certifications juridiques."
-                       % identite.get("identity_id"))
-            break
+        if identite.get("identity_id") not in signataires:
+            continue
+        declaree = identite.get("legal_capacity_to_attest")
+        if declaree == "experimental":
+            detail = ("%s se publie en `experimental` : entite nommee, aucun "
+                      "pouvoir verifie. La page du second canal doit le dire, "
+                      "et ne jamais presenter ces attestations comme des "
+                      "certifications juridiques." % identite.get("identity_id"))
+        elif declaree == "unverified" and genre != "test":
+            detail = ("%s se publie en `unverified` : ni verification des "
+                      "pouvoirs, ni decision documentee. Si une decision a ete "
+                      "prise, c est `experimental` qu il faut declarer -- "
+                      "verifier que ce n est pas un oubli de "
+                      "`--signer-capacity`." % identite.get("identity_id"))
+        else:
+            detail = ("%s se publie en `%s`. A relire : cette valeur sera lue "
+                      "par un tiers comme la nature de l engagement."
+                      % (identite.get("identity_id"), declaree))
+        bilan.dire(NOT_TESTED, "capacite juridique publiee", detail)
+        break
 
 
 def audit(arguments: argparse.Namespace) -> int:
