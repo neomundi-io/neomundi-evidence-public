@@ -1,0 +1,86 @@
+{
+  "schema": "neomundi.evidence.trust-store/1",
+  "store_id": "neomundi-evidence",
+  "updated_at_declared": "2026-11-06T00:00:00Z",
+  "store_kind": "production",
+  "verification_policy": {
+    "policy_id": "neomundi-evidence-policy/1",
+    "accepted_algorithms": [
+      "EdDSA"
+    ],
+    "accepted_curves": [
+      "Ed25519"
+    ],
+    "on_unknown_key": "not_tested",
+    "on_rotated_key_within_window": "trusted",
+    "on_rotated_key_after_window": "untrusted",
+    "on_compromised_key": "untrusted_retroactively",
+    "on_expired_key": "untrusted",
+    "on_test_key": "untrusted_unless_allowed"
+  },
+  "identities": [
+    {
+      "identity_id": "nm-recherche",
+      "legal_name": "NeoMundi Recherche",
+      "kind": "association",
+      "jurisdiction": "FR",
+      "registration_reference": "RNA W563015824",
+      "legal_capacity_to_attest": "experimental",
+      "valid_from_declared": "2026-11-06T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Entite NOMMEE, ayant decide d attester dans un cadre scientifique et non commercial. AUCUNE verification de ses pouvoirs n a ete faite. Identite declaree, non juridiquement verifiee : les attestations emises sous ce statut ne sont pas des certifications juridiques."
+    },
+    {
+      "identity_id": "nm-operator-poste",
+      "legal_name": "nm-operator-poste",
+      "kind": "machine",
+      "jurisdiction": null,
+      "registration_reference": null,
+      "legal_capacity_to_attest": "not_applicable",
+      "valid_from_declared": "2026-11-06T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Detenteur technique de la cle, et operateur. Ne s engage sur rien."
+    },
+    {
+      "identity_id": "nm-station",
+      "legal_name": "nm-station",
+      "kind": "machine",
+      "jurisdiction": null,
+      "registration_reference": null,
+      "legal_capacity_to_attest": "not_applicable",
+      "valid_from_declared": "2026-11-06T00:00:00Z",
+      "superseded_by": null,
+      "notes": "Auteur des mesures du corpus atteste. Distinct du signataire : mesurer n est pas s engager."
+    }
+  ],
+  "keys": [
+    {
+      "kid": "nm-ev-recherche-202611-1",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "alg": "EdDSA",
+      "x": "okvJGyi2vnXrP3laPW8-5eNWVPuwLQNS7mEtmu1QAJc",
+      "status": "active",
+      "signer_identity": "nm-recherche",
+      "key_custodian_identity": "nm-operator-poste",
+      "valid_from_declared": "2026-11-06T00:00:00Z",
+      "valid_until_declared": null,
+      "superseded_by": null,
+      "revocation": null,
+      "notes": "Perimetre experimental, non commercial."
+    }
+  ],
+  "store_version": 1,
+  "changes": [
+    {
+      "at_declared": "2026-11-06T00:00:00Z",
+      "what": "creation du magasin et inscription de la cle nm-ev-recherche-202611-1",
+      "by_identity": "nm-operator-poste"
+    }
+  ],
+  "limits": [
+    "Ce magasin ne contient que du materiel public.",
+    "Les dates y sont DECLAREES : aucune n est horodatee independamment.",
+    "La capacite juridique des identites est declaree, jamais verifiee par du code."
+  ]
+}

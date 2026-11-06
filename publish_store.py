@@ -323,19 +323,52 @@ def payload(arguments: argparse.Namespace) -> int:
         dis("       `audit` pour le detail.")
         return 1
 
+    # Les signataires -- c est-a-dire les identites auxquelles une cle est
+    # rattachee. On ne recopie pas tout le registre d identites : l operateur
+    # technique et l auteur des mesures ne s engagent sur rien.
+    signataires = {c.get("signer_identity") for c in magasin.get("keys", [])}
+    identites = [
+        {c: i.get(c) for c in ("identity_id", "legal_name", "kind",
+                               "jurisdiction", "registration_reference",
+                               "legal_capacity_to_attest")}
+        for i in magasin.get("identities", [])
+        if i.get("identity_id") in signataires
+    ]
+    # `x` est VOLONTAIREMENT absent. Le second canal doit permettre de
+    # DETECTER un magasin substitue, pas d en tenir lieu : s il portait la
+    # cle publique, il deviendrait lui-meme une racine de confiance, et on
+    # aurait deux sources a surveiller au lieu d une a confronter.
+    cles = [
+        {c: k.get(c) for c in ("kid", "alg", "crv", "status",
+                               "signer_identity", "valid_from_declared")}
+        for k in magasin.get("keys", [])
+    ]
+
     charge = {
-        "schema": "neomundi.evidence.trust-store-digest/1",
+        # `/2` et non `/1` : ajouter des champs change le contrat, et faire
+        # dire autre chose a `/1` serait un changement silencieux de schema.
+        "schema": "neomundi.evidence.trust-store-digest/2",
         "store_id": magasin.get("store_id"),
         "store_version": magasin.get("store_version"),
         "store_kind": magasin.get("store_kind", "production"),
         "sha256": hashlib.sha256(octets).hexdigest(),
         "updated_at_declared": magasin.get("updated_at_declared"),
+        "signers": identites,
+        "keys": cles,
         "limits": [
-            "Cette charge ne porte AUCUN materiel de cle : une empreinte et "
-            "une version, rien de plus.",
-            "Elle permet de detecter un magasin substitue. Elle n atteste ni "
-            "le contenu du magasin, ni la capacite juridique des identites "
-            "qui y figurent.",
+            "Cette charge ne porte AUCUN materiel de cle : ni scalaire prive, "
+            "ni cle publique. Le second canal sert a DETECTER un magasin "
+            "substitue, pas a en tenir lieu.",
+            "L EMPREINTE fait foi. Les metadonnees ci-dessus sont "
+            "informatives : si elles divergent du magasin, ne faire confiance "
+            "a AUCUN des deux et nous le signaler.",
+            "Elle n atteste ni le contenu du magasin, ni la capacite "
+            "juridique des identites qui y figurent.",
+            "`legal_capacity_to_attest: experimental` signifie que l entite "
+            "est NOMMEE et a decide d attester dans un cadre scientifique et "
+            "non commercial, et qu AUCUNE verification de ses pouvoirs n a "
+            "ete faite. Identite declaree, non juridiquement verifiee : ce "
+            "n est pas une certification juridique.",
             "La date est DECLAREE : aucune horloge de confiance n intervient.",
         ],
     }
