@@ -83,7 +83,7 @@ proposition à accepter ou amender.
 | Où vit le secret ? | le **magasin DPAPI** du poste de l'opérateur, qui le lie à cet utilisateur Windows sur cette machine |
 | Qui peut le lire ? | le rôle d'**opérateur technique** de B-1 D-3, et personne d'autre |
 | Y a-t-il une sauvegarde hors machine ? | **oui, exigée** |
-| Où est la sauvegarde ? | un **support hors ligne**, physiquement séparé du poste, portant la clé privée et son `kid` **et rien d'autre** |
+| Où est la sauvegarde ? | **approuvé le 6 novembre** : une **clé USB chiffrée dédiée**, hors machine, physiquement séparée du poste, portant la clé privée et son `kid` **et rien d'autre** |
 | Qui autorise une signature ? | le **représentant habilité** de B-1 D-2 |
 
 ### Pourquoi la sauvegarde n'est pas optionnelle, et pourquoi elle est dangereuse
@@ -221,24 +221,54 @@ redites parce que c'est la partie qui porte des conséquences :
 
 ---
 
-## Acceptation
+## Acceptation — APPROUVÉE le 6 novembre 2026
 
 ```
-C-1  La garde ci-dessus est acceptee / amendee comme suit :
+C-1  La garde ci-dessus est ACCEPTEE, avec une garde de rotation
+     explicitement approuvee :
 
-     ......................................................
+     AUCUN retrait de cle sans successeur PREALABLEMENT PUBLIE
+     dans le meme magasin.
+
+     Outille et eprouve : `sign.py retire --kind rotated` refuse sans
+     `--successor`, puis refuse un successeur absent du magasin. Les
+     cas 4, 5 et 6 de `tests/test_cles.py` le verrouillent.
 
 C-2  Le support de sauvegarde hors machine est :
 
-     ......................................................
+     une CLE USB CHIFFREE DEDIEE, hors machine, portant la cle privee
+     et son `kid` ET RIEN D AUTRE.
+
+     << Dediee >> est une contrainte, pas un adjectif : un support
+     partage avec autre chose porte un manifeste, un nom de fichier,
+     une date -- de quoi dire a qui le vole ce qu il tient.
 
 C-3  Le registre des dossiers signes sera tenu a :
 
-     ......................................................
-     (hors du depot public)
+     l espace prive Evidence VERSIONNE, sous `registre/`, avec une
+     sauvegarde INDEPENDANTE de celle de la cle.
 
-     Date : ...............   Signature : ..............................
+     Hors du depot public, et la garde est dure : `sign.py` refuse
+     d ecrire un registre sous la racine du depot (cas 12).
+
+     Date : 6 novembre 2026   Decision de direction.
 ```
 
-Tant que ce bloc n'est pas rempli, **aucune clé n'est générée**, et tout ce
-que ce produit signe reste une démonstration.
+### Pourquoi les deux sauvegardes restent séparées
+
+La clé et le registre se sauvegardent **indépendamment**, et ce n'est pas une
+précaution de confort : les réunir sur le même support offrirait à qui le vole
+**à la fois le secret et la liste de ce qu'il ouvre**. Le registre nomme
+chaque paquet signé ; la clé permet d'en signer d'autres. Un seul support
+porteur des deux transforme un vol en substitution indétectable.
+
+### Ce qui reste, et c'est tout
+
+**La clé de production n'est pas générée**, et ce bloc rempli ne la génère
+pas. Il autorise le geste ; le geste se fait **hors ligne, sur le poste de
+l'opérateur**, réseau débranché, selon la procédure du §Activation — pas dans
+une session de travail, et pas par un agent.
+
+Jusque-là, tout ce que ce produit signe reste une **démonstration**, et le
+vérificateur le dit de lui-même : une clé `test` n'accorde rien sans
+`--allow-test-keys`.
