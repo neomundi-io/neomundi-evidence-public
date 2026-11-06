@@ -56,13 +56,13 @@ jobs:
 
       - name: Fabriquer la fixture
         run: |
-          python tests/make_fixture.py "$RUNNER_TEMP/fixture"
+          python tests/make_fixture.py "$RUNNER_TEMP/fixture" --profile v2
           echo "FIXTURE=$RUNNER_TEMP/fixture" >> "$GITHUB_ENV"
           echo "ARCHIVE=$RUNNER_TEMP/fixture/NEOMUNDI_EVIDENCE_CI_FIXTURE.zip" >> "$GITHUB_ENV"
 
       - name: La fixture est deterministe a l octet
         run: |
-          python tests/make_fixture.py "$RUNNER_TEMP/fixture-bis" > /dev/null
+          python tests/make_fixture.py "$RUNNER_TEMP/fixture-bis" --profile v2 > /dev/null
           a=$(sha256sum "$ARCHIVE" | cut -d' ' -f1)
           b=$(sha256sum "$RUNNER_TEMP/fixture-bis/NEOMUNDI_EVIDENCE_CI_FIXTURE.zip" | cut -d' ' -f1)
           test "$a" = "$b" || { echo "::error::deux generations differentes : $a vs $b"; exit 1; }
@@ -210,6 +210,17 @@ jobs:
         run: |
           python tests/test_bom.py
 
+      # L evaluation ODA3 du 6 novembre a mesure un registre source de 151
+      # enregistrements pour un export de 120, avec un manifeste annoncant
+      # 151. Et une archive amputee d une observation, decomptes refaits,
+      # franchissait `verify.py` a 19 PASS / 0 FAIL. L integrite interne ne
+      # dit rien de la completude de l export : cette suite tient les deux
+      # separees, et garde la reproductibilite du profil v1 -- dont une
+      # attestation Ed25519 et une ancre Bitcoin dependent.
+      - name: Suite de completude -- l integrite ne suffit pas
+        run: |
+          python tests/test_completude.py
+
       # La langue ne doit changer que la prose. Un etat, un code de sortie,
       # un nom de champ ou une empreinte qui bouge avec la langue est un
       # defaut. Le cas 7 MESURE la couverture du catalogue au lieu de la
@@ -302,7 +313,7 @@ jobs:
           attendus = [
               (["../../verify.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
                 "--corpus", "corpus"],
-               "BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED"),
+               "BILAN : 20 PASS, 0 FAIL, 2 NOT TESTED"),
               (["../../verify_attestation.py", "NEOMUNDI_EVIDENCE_V1_DEMO.zip.jws",
                 "--archive", "NEOMUNDI_EVIDENCE_V1_DEMO.zip",
                 "--trust-store", "trust-store.json", "--allow-test-keys"],
@@ -391,7 +402,7 @@ jobs:
 
       - name: Fabriquer la fixture
         run: |
-          python tests/make_fixture.py "$RUNNER_TEMP/fixture"
+          python tests/make_fixture.py "$RUNNER_TEMP/fixture" --profile v2
           echo "ARCHIVE=$RUNNER_TEMP/fixture/NEOMUNDI_EVIDENCE_CI_FIXTURE.zip" >> "$GITHUB_ENV"
           echo "FIXTURE=$RUNNER_TEMP/fixture" >> "$GITHUB_ENV"
 

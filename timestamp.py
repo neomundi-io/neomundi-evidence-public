@@ -552,11 +552,40 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, dict]:
                        requis=True)
 
     # --- ce que nous ne verifions pas, et ne verifierons pas --------------
+    # R-4 : nommer `stamped_at_declared` et les blocs COTE A COTE, et dire la
+    # relation qui doit tenir. La comparaison numerique demande un en-tete de
+    # bloc, que ce depot refuse d aller chercher ; le signalement, non.
+    descripteur = contexte.get("descriptor") or {}
+    soumis = descripteur.get("stamped_at_declared")
+    ancres = [a for a in (contexte.get("attestations") or [])
+              if a.get("kind") == "bitcoin"]
+    if soumis and ancres:
+        confrontation = (
+            " La soumission est DECLAREE au %s, et la preuve est ancree au(x) "
+            "bloc(s) %s. La relation qui doit tenir : une preuve etablit que "
+            "l empreinte existait AU PLUS TARD a son bloc, donc la soumission "
+            "doit PRECEDER ce bloc. Une date de soumission posterieure serait "
+            "une contradiction -- on aurait soumis une empreinte deja ancree. "
+            "Cet outil ne tranche pas : il faudrait la date du bloc."
+            % (soumis, ", ".join(str(a["height"]) for a in ancres)))
+    elif soumis:
+        confrontation = (
+            " La soumission est DECLAREE au %s, et aucune attestation Bitcoin "
+            "n ancre encore cette preuve : il n y a rien a quoi la confronter."
+            % soumis)
+    elif ancres:
+        confrontation = (
+            " La preuve est ancree au(x) bloc(s) %s, et aucun descripteur ne "
+            "declare de date de soumission : fournir --descriptor pour que les "
+            "deux soient dits cote a cote."
+            % ", ".join(str(a["height"]) for a in ancres))
+    else:
+        confrontation = ""
     bilan.dire(NOT_TESTED, "temps verifie par un tiers",
                "hors de portee de cet outil : valider une attestation Bitcoin "
                "demande un en-tete de bloc, donc une source de confiance que nous "
-               "n avons pas. A confronter avec le client officiel : "
-               "`ots verify %s`" % arguments.proof.name)
+               "n avons pas.%s A confronter avec le client officiel : "
+               "`ots verify %s`" % (confrontation, arguments.proof.name))
     bilan.dire(NOT_TESTED, "qualification eIDAS",
                "AUCUNE. OpenTimestamps n est pas un prestataire de services de "
                "confiance qualifie au sens du reglement eIDAS, et rien ici ne doit "

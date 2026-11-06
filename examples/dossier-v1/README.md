@@ -51,13 +51,21 @@ None needs the network. None writes into the package.
 python ../../verify.py NEOMUNDI_EVIDENCE_V1_DEMO.zip --corpus corpus
 ```
 
-**Expected: `BILAN : 19 PASS, 0 FAIL, 2 NOT TESTED`**, over 21 lines.
+**Expected: `BILAN : 19 PASS, 0 FAIL, 3 NOT TESTED`**, over 22 lines.
 
 No dependency: `verify.py` imports only the standard library. To satisfy
 yourself, block everything and run it again — the summary is identical.
 
-The 2 `NOT TESTED` are the ledger chaining and the archive's origin: two
-things no local verification can do, and which carry their reason explicitly.
+The 3 `NOT TESTED` are the ledger chaining, the archive's origin, and — new
+since 6 November — the **completeness of the export**. None is a defect of
+this package: each names a thing no local verification can establish, and the
+third says something this package genuinely does not declare.
+
+That third line is the answer to an external evaluation's central finding: an
+archive can be internally perfect and still export only part of its ledger.
+This package predates the contract that would declare it, so the line reads
+`NOT TESTED` — not `PASS`, and not `FAIL` either, because the gap is the
+producer's to close, not yours.
 
 ### 2 — Ed25519 attestation
 
@@ -173,8 +181,14 @@ undetectable until 6 November.
 ## Reproduce the whole package
 
 ```sh
-python ../../tests/make_fixture.py <directory>
+python ../../tests/make_fixture.py <directory> --profile v1
 ```
+
+**`--profile v1` is required.** The generator's default is now `v2`, a
+faithful profile that chains all four members, numbers `sequence` monotonically
+and declares its completeness contract. `v2` is a **different archive** — and
+this package is signed and timestamped on the `v1` bytes, so `v1` is what
+reproduces it.
 
 The archive is **deterministic byte for byte**: two runs yield the same
 digest. The attestation cannot be reproduced — its private key was destroyed.

@@ -70,7 +70,7 @@ python verify.py NEOMUNDI_EVIDENCE_DEMO_V0.1.zip \
   --corpus <gel>/GROUNDED-S1/entrees/corpus
 ```
 
-Attendu : `19 PASS, 0 FAIL, 2 NOT TESTED`.
+Attendu : `19 PASS, 0 FAIL, 2 NOT TESTED`. *(mesuré avant l'existence du contrôle de complétude ; toute archive antérieure à ce contrat porte désormais un `NOT TESTED` de plus — voir [consolidation ODA3](ODA3_CONSOLIDATION.fr.md))*
 
 Les deux contrôles non faits sont nommés avec leur raison : le chaînage JCS
 (hors de portée d'un vérificateur indépendant, par choix) et l'origine de

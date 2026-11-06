@@ -81,6 +81,23 @@ and the control reports `NOT TESTED` — never `PASS`.
 
 Standard library only. No network. No write outside the requested output.
 
+### One role whose name misleads — `config_snapshot`
+
+In a **real** ledger, `config_snapshot_sha256` carries the digest of the
+**campaign**, not of a configuration file. The name says otherwise, and that
+is a trap worth naming: offer a configuration file for this role and the
+control returns `MISMATCHED`, from which a reviewer would conclude the
+artifact was tampered with — where in fact only the field is misnamed.
+
+The field is **not** renamed. Renaming it would invalidate every archive that
+already carries it, and the archives are the evidence. It is documented
+instead — here, and in a comment at the mapping in `bind.py`, which is where
+someone would meet the trap.
+
+Raised as recommendation **R-7** by the external evaluation of 6 November,
+which measured that `campaign_sha256` and `config_snapshot_sha256` hold the
+**same value** in a real ledger.
+
 ---
 
 ## What the verifier checks

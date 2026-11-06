@@ -72,7 +72,31 @@ demandé est la seule chose établie.
 ### Identités de campagne
 
 Chaque `campaign_sha256` est concordant sur **trois** sources : déclaré par le
-registre, porté par la définition gelée, et recalculé indépendamment. 8 sur 8.
+registre, porté par la définition gelée, et **recalculé par nous** depuis cette
+définition, avec la bibliothèque standard seule. 8 sur 8 — revérifié le
+6 novembre 2026, 10 sur 10 en comptant deux campagnes non publiées ici.
+
+> **« Recalculé par nous » n'est pas « reproductible indépendamment », et une
+> édition antérieure de cette page confondait les deux.** Elle écrivait
+> *recalculé indépendamment*, ce qui se lit comme une garantie qu'un relecteur
+> peut exercer. Deux choses l'en empêchent, et les deux sont de notre fait : la
+> recette n'était **écrite nulle part**, et les définitions de campagne sont
+> **hors de portée de la branche principale de l'instrument** — voir
+> [Obtenir les archives](#obtenir-les-archives).
+>
+> Ce n'est pas un manque théorique. Une évaluation externe du 6 novembre
+> détenait les données gelées, a essayé trois recettes plausibles sur
+> `grounded-med-synthetique-v1`, et a conclu **« non établi »** — elle avait
+> retiré un champ exclu au lieu de deux. Une revendication vraie que personne
+> d'autre ne peut exercer est, vue de l'extérieur, indiscernable d'une
+> revendication fausse.
+>
+> La recette est une formule sur un objet dont la forme est déjà décrite ici ;
+> elle ne porte aucune clé, aucun secret, aucun contenu de jeu de données.
+> **Sa publication est une décision en attente** (recommandation ODA3 R-5).
+> Jusqu'à ce qu'elle soit prise, tenir chaque `campaign_sha256` ci-dessous pour
+> une empreinte de **classe C** au sens du tableau de
+> [Vérifier](#vérifier) : vérifiable avec l'instrument, pas sans lui.
 
 | Campagne | `campaign_sha256` |
 |---|---|
@@ -102,6 +126,29 @@ le contredise.
 ---
 
 ## Vérifier
+
+### Qui peut vérifier quoi — quatre classes d'accès
+
+Chaque empreinte de cette page appartient à exactement une classe. C'est la
+classe, et non l'empreinte, qui dit à un relecteur s'il peut exercer la
+revendication lui-même.
+
+| | Classe | Qui peut vérifier | Empreintes concernées |
+|---|---|---|---|
+| **A** | **Le dépôt public seul** | n'importe qui, bibliothèque standard | les empreintes du dossier de démonstration V1 ; la fixture de CI, déterministe à l'octet |
+| **B** | **L'archive de gel, bibliothèque standard** | un relecteur à qui l'accès est accordé | les deux empreintes d'archive de gel ; les 30 `recording_sha256` ; `bundle_sha256` |
+| **C** | **L'instrument** | nous, aujourd'hui | le chaînage JCS ; `record_sha256` ; **et `campaign_sha256`, jusqu'à publication de sa recette** |
+| **D** | **Personne, par nature** | — | les empreintes de tête des registres — `recorded_at` est lu à l'horloge, donc un rejeu ne les reproduit jamais ; MED, dont les appels étaient réels |
+
+**C'est la classe C qu'il faut surveiller.** Une empreinte de classe C n'est
+pas plus faible cryptographiquement — elle est plus faible **sur le plan
+probatoire**, parce que sa vérification repose sur la partie qui l'a produite.
+Faire passer une empreinte de C à B est toujours un acte de documentation,
+jamais de cryptographie.
+
+**La classe D n'est pas un défaut.** Une empreinte de tête qui ne dépendrait de
+rien ne serait pas une chaîne. Confondre D avec un échec est l'erreur
+symétrique de confondre C avec B.
 
 ### Sans rien installer
 

@@ -71,7 +71,7 @@ conservée **ailleurs** qu'avec l'archive — c'est le fil de l'étape 4.
 python verify.py <archive> --corpus <corpus>
 ```
 
-→ **`19 PASS, 0 FAIL, 2 NOT TESTED`**
+→ **`19 PASS, 0 FAIL, 2 NOT TESTED`** *(mesuré avant l'existence du contrôle de complétude ; toute archive antérieure à ce contrat porte désormais un `NOT TESTED` de plus — voir [consolidation ODA3](ODA3_CONSOLIDATION.fr.md))*
 
 **À dire :** `verify.py` n'a aucune dépendance, n'émet aucun appel réseau,
 n'écrit rien. Il est fait pour être **lu** avant d'être exécuté. Les deux

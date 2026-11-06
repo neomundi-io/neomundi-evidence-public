@@ -57,7 +57,7 @@ estimate.
 
 | Guarantee | Evidence |
 |---|---|
-| **Package integrity**, 21 controls, three never-merged states | `19 PASS, 0 FAIL, 2 NOT TESTED` on the demonstration package |
+| **Package integrity**, 21 controls, three never-merged states | `19 PASS, 0 FAIL, 2 NOT TESTED` on the demonstration package † |
 | **A tampered package is refused** | 10 alterations out of 10 detected; 15 hostile archives out of 15 get a verdict |
 | **Autonomous verification**, offline, no dependency | identical summary with `cryptography` and `opentimestamps` blocked |
 | **No malformed input crashes** the tool | 9 malformed inputs out of 9 return a motivated verdict |
@@ -68,6 +68,10 @@ estimate.
 | **An external receipt is confronted without being believed** | 5 statuses distinguished, contradictions preserved |
 | **Verification by a tool that is not ours** | `openssl pkeyutl -verify` validates the same signature |
 | **An automated consumer cannot be misled** | `--strict`: codes 0 / 1 / 2, changing no verdict |
+
+† Measured before the completeness control existed; see
+[ODA3 consolidation](ODA3_CONSOLIDATION.md).
+
 
 ### And one declared limit that closed
 

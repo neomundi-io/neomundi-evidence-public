@@ -58,7 +58,7 @@ estimation.
 
 | Garantie | Preuve |
 |---|---|
-| **Intégrité d'un dossier**, 21 contrôles, trois états jamais fusionnés | `19 PASS, 0 FAIL, 2 NOT TESTED` sur le dossier de démonstration |
+| **Intégrité d'un dossier**, 21 contrôles, trois états jamais fusionnés | `19 PASS, 0 FAIL, 2 NOT TESTED` sur le dossier de démonstration † |
 | **Un dossier altéré est refusé** | 10 altérations sur 10 détectées ; 15 archives hostiles sur 15 reçoivent un verdict |
 | **Vérification autonome**, hors ligne, sans dépendance | bilan identique avec `cryptography` et `opentimestamps` bloqués |
 | **Aucune entrée malformée ne fait planter** l'outil | 9 entrées malformées sur 9 rendent un verdict motivé |
@@ -69,6 +69,10 @@ estimation.
 | **Un reçu externe est confronté sans être cru** | 5 statuts distingués, contradictions conservées |
 | **Vérification par un outil qui n'est pas le nôtre** | `openssl pkeyutl -verify` valide la même signature |
 | **Un consommateur automatisé ne peut pas se tromper** | `--strict` : codes 0 / 1 / 2, sans changer aucun verdict |
+
+† Mesuré avant l'existence du contrôle de complétude ; voir
+[consolidation ODA3](ODA3_CONSOLIDATION.fr.md).
+
 
 ### Et une limite déclarée qui s'est refermée
 

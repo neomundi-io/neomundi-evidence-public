@@ -93,9 +93,16 @@ Two corpora, two purposes. Neither replaces the other.
 | Execution regime | `synthetic` — observes no real operator | `live` — seven named providers |
 | Measurements | 15 `measured`, 8 `degraded`, **7 `not_measured`** | 208, all `measured` |
 | Models named | no — it observes nothing real | **yes** — see the table in [Demonstration B](docs/MED_DEMO.md) |
-| Verification | **19 PASS, 0 FAIL, 2 NOT TESTED** | **10 PASS, 0 FAIL, 8 NOT TESTED** |
+| Verification | **19 PASS, 0 FAIL, 2 NOT TESTED** †| **10 PASS, 0 FAIL, 8 NOT TESTED** †|
 | Tamper suite | **applies** — 10/10 detected | does not apply, and says why |
 | Documentation | [Demonstration A](docs/DEMO.md) | [Demonstration B](docs/MED_DEMO.md) |
+
+† Measured on 5 November, **before** the completeness control existed. Any
+archive predating that contract now shows one more `NOT TESTED` — the figure
+is not restated here because these two archives are not in this repository
+and we have not re-measured them. See
+[ODA3 consolidation](docs/ODA3_CONSOLIDATION.md).
+
 
 **Why both.** A synthetic corpus can carry measurements that were *not made* —
 that is how "an absence stays an absence" is demonstrated rather than promised.
@@ -276,6 +283,7 @@ publisher.
 | [`docs/MED_DEMO.md`](docs/MED_DEMO.md) | Demonstration B — the medical experiment, its dataset, its models and its limits |
 | [`docs/TIMESTAMPING.md`](docs/TIMESTAMPING.md) | independent timestamping with OpenTimestamps: what it proves, and why `PENDING` proves no date |
 | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) | integrating Evidence: exit codes, `--strict`, JSON reports, and CI |
+| [`docs/ODA3_CONSOLIDATION.md`](docs/ODA3_CONSOLIDATION.md) | the ODA3 consolidation: eight recommendations treated, what remains open, and the five distinctions it protects |
 | [`docs/V1_CLOSURE_PLAN.md`](docs/V1_CLOSURE_PLAN.md) | the closure plan for the remaining conditions, the order of work, and the verdicts |
 | [`docs/B1_EXPERIMENTAL_SIGNING_DECISION.md`](docs/B1_EXPERIMENTAL_SIGNING_DECISION.md) | B-1 — the experimental signing policy, as a decision sheet to approve |
 | [`docs/B2_KEY_CUSTODY_AND_ACTIVATION.md`](docs/B2_KEY_CUSTODY_AND_ACTIVATION.md) | B-2 — custody and activation of the real Ed25519 key, and why it is distinct from RGC |

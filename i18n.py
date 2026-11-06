@@ -72,6 +72,20 @@ LANGUES = (FR, EN)
 
 EXACT: dict[str, str] = {
     # ---- intitules de controle, verify.py -------------------------------
+    # ---- R-1 + R-2 : le controle de completude ---------------------------
+    "completude de l export": "completeness of the export",
+    "l archive ne declare pas de contrat de completude : il lui manque "
+    "`registre.enregistrements_exportes` et `registre.types_exclus`. Son "
+    "integrite interne peut etre entiere et son export partiel -- une chaine "
+    "valide ne dit rien de ce qui n a pas ete exporte. Non marque requis : "
+    "c est au PRODUCTEUR de l archive de declarer ce contrat, pas a "
+    "l appelant de le fournir.":
+        "the archive declares no completeness contract: it lacks "
+        "`registre.enregistrements_exportes` and `registre.types_exclus`. Its "
+        "internal integrity may be whole and its export partial -- a valid "
+        "chain says nothing about what was not exported. Not marked required: "
+        "it is for the archive's PRODUCER to declare this contract, not for "
+        "the caller to supply it.",
     "archive lisible": "archive readable",
     "aucun membre ne sort du repertoire cible":
         "no member escapes the target directory",
@@ -505,6 +519,20 @@ FORMATS: dict[str, str] = {
 
     # ---- details formates, verify.py ------------------------------------
     "%d sans observation livree : %s": "%d with no delivered observation: %s",
+    "%d enregistrement(s) au registre, %d exporte(s), %d retenu(s) : %s. Les "
+    "decomptes s additionnent. Ce qui est retenu est NOMME, donc l absence est "
+    "une exclusion declaree et non un manque silencieux.":
+        "%d record(s) in the ledger, %d exported, %d withheld: %s. The counts "
+        "add up. What is withheld is NAMED, so the absence is a declared "
+        "exclusion and not a silent gap.",
+    "le registre annonce %d enregistrement(s), or %d exporte(s) + %d retenu(s) "
+    "font %d":
+        "the ledger announces %d record(s), yet %d exported + %d withheld "
+        "make %d",
+    "le contrat annonce %d enregistrement(s) exporte(s), les decomptes des "
+    "membres en totalisent %d":
+        "the contract announces %d exported record(s), the members' counts "
+        "total %d",
     "%s introuvable": "%s not found",
     "chemins abusifs : %s": "abusive paths: %s",
     "controle interrompu par un defaut de l outil : %s: %s":

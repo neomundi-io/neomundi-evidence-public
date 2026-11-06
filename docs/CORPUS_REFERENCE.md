@@ -70,7 +70,28 @@ only thing established.
 ### Campaign identities
 
 Each `campaign_sha256` is consistent across **three** sources: declared by the
-ledger, carried by the frozen definition, and recomputed independently. 8 of 8.
+ledger, carried by the frozen definition, and **recomputed by us** from that
+definition with the standard library alone. 8 of 8 — re-verified 6 November
+2026, 10 of 10 counting two campaigns not published here.
+
+> **"Recomputed by us" is not "independently reproducible", and an earlier
+> edition of this page blurred the two.** It said *recomputed independently*,
+> which reads as a guarantee a reviewer can exercise. Two things stand in the
+> way, and both are ours: the recipe was **written down nowhere**, and the
+> campaign definitions are **not reachable from the instrument's main branch**
+> — see [Obtaining the archives](#obtaining-the-archives).
+>
+> This is not a theoretical gap. An external evaluation on 6 November held the
+> frozen data, tried three plausible recipes on
+> `grounded-med-synthetique-v1`, and concluded **"not established"** — it had
+> removed one excluded field instead of two. A true claim that no one else can
+> exercise is indistinguishable, from the outside, from a false one.
+>
+> The recipe is a formula over an object whose shape is already described here;
+> it carries no key, no secret and no dataset content. **Publishing it is a
+> pending decision** (ODA3 recommendation R-5). Until it is taken, treat every
+> `campaign_sha256` below as **class C** in the table under
+> [Verifying](#verifying): verifiable with the instrument, not without it.
 
 | Campaign | `campaign_sha256` |
 |---|---|
@@ -99,6 +120,27 @@ no input can be substituted without the ledger contradicting it.
 ---
 
 ## Verifying
+
+### Who can verify what — four classes of access
+
+Every hash on this page belongs to exactly one class. The class, not the hash,
+is what tells a reviewer whether they can exercise the claim themselves.
+
+| | Class | Who can verify | Hashes in it |
+|---|---|---|---|
+| **A** | **The public repository alone** | anyone, stdlib only | the V1 demonstration dossier's digests; the CI fixture, which is byte-deterministic |
+| **B** | **The freeze archive, stdlib only** | a reviewer granted access | the two freeze-archive hashes; the 30 `recording_sha256`; `bundle_sha256` |
+| **C** | **The instrument** | us, today | JCS chaining; `record_sha256`; **and `campaign_sha256`, until its recipe is published** |
+| **D** | **Nobody, by nature** | — | ledger head hashes — `recorded_at` is read from a clock, so a re-execution never reproduces them; MED, whose calls were live |
+
+**Class C is the one to watch.** A hash in class C is not weaker
+cryptographically — it is weaker *evidentially*, because its verification
+rests on the party that produced it. Moving a hash from C to B is always an
+act of documentation, never of cryptography.
+
+**Class D is not a defect.** A head hash that depended on nothing would not be
+a chain. Confusing D with a failure is the symmetric error to confusing C
+with B.
 
 ### With nothing installed
 
