@@ -60,6 +60,80 @@ import json
 import sys
 from pathlib import Path
 
+
+# ---------------------------------------------------------------------------
+# La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
+# cote, cet outil tourne et rend exactement les memes verdicts, en francais.
+# Les controles ne doivent jamais dependre de la couche de traduction.
+# ---------------------------------------------------------------------------
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+#: La langue d affichage, posee une fois par `main`. Une cellule plutot
+#: qu un parametre : il y a 65 appels a `dis` dans ce fichier, et les
+#: renommer se relit, leur ajouter un argument non.
+_LANGUE = [i18n.FR]
+
+
+def dis(*morceaux: object) -> None:
+    """Imprime de la prose, dans la langue courante.
+
+    Seul le FORMAT est traduit. Les arguments -- empreintes, decomptes,
+    noms de fichiers, etiquettes venues d un recu tiers -- traversent
+    VERBATIM : les traduire les abimerait.
+    """
+    if not morceaux:
+        print()
+        return
+    premier = morceaux[0]
+    if isinstance(premier, str):
+        # DEUX formes d appel coexistent dans ce depot :
+        #   dis("x : %s", valeur)      -> `premier` est un FORMAT
+        #   dis("x : %s" % valeur)     -> `premier` est DEJA rendu
+        # La premiere se traduit par recherche exacte du format ; la
+        # seconde par le moteur a motifs, qui en extrait les arguments.
+        # Sans ce repli, toute la prose construite par `%` sortait en
+        # francais -- et c est la forme majoritaire ici.
+        pose = i18n.traduire_format(premier, _LANGUE[0])
+        if pose == premier:
+            pose = i18n.traduire(premier, _LANGUE[0])
+        premier = pose
+    print(premier, *morceaux[1:])
+
+
+def _pose_langue(arguments: "argparse.Namespace") -> None:
+    """Pose la langue depuis les arguments, si l outil en expose une."""
+    _LANGUE[0] = getattr(arguments, "lang", i18n.FR) or i18n.FR
+
+#: `--lang` est declare sur un analyseur PARENT, pour qu il s ecrive apres
+#: la sous-commande -- `verify <fichier> --lang en` -- qui est la facon dont
+#: on l ecrit naturellement.
+def _parent_langue() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    return parent
+
 PASS, FAIL, NOT_TESTED = "PASS", "FAIL", "NOT TESTED"
 
 SCHEMA_DESCRIPTEUR = "neomundi.evidence.timestamp/1"
@@ -183,7 +257,11 @@ def lire_attestations(octets: bytes) -> list[dict[str, object]] | None:
 class Bilan:
     """Les lignes de controle. PASS, FAIL et NOT TESTED restent trois etats."""
 
-    def __init__(self) -> None:
+    def __init__(self, langue: str | None = None) -> None:
+        #: La langue d AFFICHAGE. `self.lignes` stocke toujours
+        #: le francais : c est ce qui garantit que le mode strict,
+        #: les codes de sortie et le rapport JSON n en dependent pas.
+        self.langue = langue or _LANGUE[0]
         self.lignes: list[tuple[str, str, str]] = []
         #: Index des lignes dont le NOT TESTED est CONTINGENT.
         self.requis: list[int] = []
@@ -193,7 +271,12 @@ class Bilan:
         if requis:
             self.requis.append(len(self.lignes))
         self.lignes.append((etat, controle, detail))
-        print("[%-10s] %s%s" % (etat, controle, " - " + detail if detail else ""))
+        # L etat n est JAMAIS traduit : les trois sont des termes du
+        # contrat. Seules la prose de l intitule et celle du detail
+        # changent de langue.
+        vu = i18n.traduire(controle, self.langue)
+        vu_detail = i18n.traduire(detail, self.langue)
+        print("[%-10s] %s%s" % (etat, vu, " - " + vu_detail if vu_detail else ""))
 
     def compte(self, etat: str) -> int:
         return sum(1 for l in self.lignes if l[0] == etat)
@@ -237,12 +320,12 @@ def stamp(arguments: argparse.Namespace) -> int:
             brut.update(bloc)
     empreinte = brut.digest()
 
-    print("Sujet      : %s" % arguments.subject)
-    print("Empreinte  : %s" % empreinte.hex())
-    print()
-    print("SEULE cette valeur de 32 octets est transmise. Ni l archive, ni le")
-    print("manifeste, ni aucune donnee de pilote ne quitte ce poste.")
-    print()
+    dis("Sujet      : %s" % arguments.subject)
+    dis("Empreinte  : %s" % empreinte.hex())
+    dis()
+    dis("SEULE cette valeur de 32 octets est transmise. Ni l archive, ni le")
+    dis("manifeste, ni aucune donnee de pilote ne quitte ce poste.")
+    dis()
 
     timestamp = Timestamp(empreinte)
     repondus, muets = [], []
@@ -250,10 +333,10 @@ def stamp(arguments: argparse.Namespace) -> int:
         try:
             timestamp.merge(RemoteCalendar(url).submit(empreinte, timeout=arguments.timeout))
             repondus.append(url)
-            print("[%-10s] %s" % ("SOUMIS", url))
+            dis("[%-10s] %s" % ("SOUMIS", url))
         except Exception as erreur:  # noqa: BLE001 - un calendrier muet n est pas fatal
             muets.append(url)
-            print("[%-10s] %s -- %s" % ("MUET", url, type(erreur).__name__))
+            dis("[%-10s] %s -- %s" % ("MUET", url, type(erreur).__name__))
 
     if not repondus:
         raise SystemExit(
@@ -267,7 +350,7 @@ def stamp(arguments: argparse.Namespace) -> int:
     sortie = arguments.out or Path(str(arguments.subject) + ".ots")
     sortie.parent.mkdir(parents=True, exist_ok=True)
     sortie.write_bytes(preuve)
-    print("\npreuve ecrite : %s (%d octets)" % (sortie, len(preuve)))
+    dis("\npreuve ecrite : %s (%d octets)" % (sortie, len(preuve)))
 
     if arguments.descriptor:
         descripteur = {
@@ -298,13 +381,13 @@ def stamp(arguments: argparse.Namespace) -> int:
             (json.dumps(descripteur, ensure_ascii=False, indent=2, sort_keys=True)
              + "\n").encode("utf-8")
         )
-        print("descripteur   : %s" % arguments.descriptor)
+        dis("descripteur   : %s" % arguments.descriptor)
 
-    print()
-    print("ETAT : PENDING sur %d calendrier(s). **Ce n est pas encore une preuve"
+    dis()
+    dis("ETAT : PENDING sur %d calendrier(s). **Ce n est pas encore une preuve"
           % len(repondus))
-    print("de temps.** Relancer `upgrade` dans quelques heures, une fois la")
-    print("transaction confirmee par la chaine.")
+    dis("de temps.** Relancer `upgrade` dans quelques heures, une fois la")
+    dis("transaction confirmee par la chaine.")
     return 0
 
 
@@ -315,39 +398,39 @@ def stamp(arguments: argparse.Namespace) -> int:
 
 def inspect(arguments: argparse.Namespace) -> int:
     octets = arguments.proof.read_bytes()
-    print("Preuve    : %s (%d octets)" % (arguments.proof, len(octets)))
-    print("empreinte : %s" % hashlib.sha256(octets).hexdigest())
+    dis("Preuve    : %s (%d octets)" % (arguments.proof, len(octets)))
+    dis("empreinte : %s" % hashlib.sha256(octets).hexdigest())
     try:
         engagee = empreinte_engagee(octets)
     except Illisible as erreur:
-        print("\n[FAIL] %s" % erreur)
+        dis("\n[FAIL] %s" % erreur)
         return 1
-    print("\nempreinte engagee : %s" % engagee)
-    print("  (lue a offset fixe, sans aucune dependance)")
+    dis("\nempreinte engagee : %s" % engagee)
+    dis("  (lue a offset fixe, sans aucune dependance)")
 
     attestations = lire_attestations(octets)
     if attestations is None:
-        print("\nattestations : NON LUES -- `opentimestamps` est absent.")
-        print("  pip install opentimestamps pour les lire.")
+        dis("\nattestations : NON LUES -- `opentimestamps` est absent.")
+        dis("  pip install opentimestamps pour les lire.")
         return 0
     pending = [a for a in attestations if a["kind"] == "pending"]
     bitcoin = [a for a in attestations if a["kind"] == "bitcoin"]
-    print("\n%d attestation(s) :" % len(attestations))
+    dis("\n%d attestation(s) :" % len(attestations))
     for a in attestations:
         if a["kind"] == "pending":
-            print("  PENDING   %s" % a["uri"])
+            dis("  PENDING   %s" % a["uri"])
         elif a["kind"] == "bitcoin":
-            print("  BITCOIN   bloc %d" % a["height"])
+            dis("  BITCOIN   bloc %d" % a["height"])
         else:
-            print("  INCONNUE  tag %s" % a.get("tag"))
-    print()
+            dis("  INCONNUE  tag %s" % a.get("tag"))
+    dis()
     if bitcoin:
-        print("Au moins une attestation Bitcoin est presente. Le TEMPS qu elle")
-        print("porte reste a verifier avec le client officiel :")
-        print("  ots verify %s" % arguments.proof.name)
+        dis("Au moins une attestation Bitcoin est presente. Le TEMPS qu elle")
+        dis("porte reste a verifier avec le client officiel :")
+        dis("  ots verify %s" % arguments.proof.name)
     else:
-        print("Aucune attestation Bitcoin : %d PENDING seulement." % len(pending))
-        print("**Ce n est pas une preuve de temps.** Relancer `upgrade` plus tard.")
+        dis("Aucune attestation Bitcoin : %d PENDING seulement." % len(pending))
+        dis("**Ce n est pas une preuve de temps.** Relancer `upgrade` plus tard.")
     return 0
 
 
@@ -360,14 +443,14 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, dict]:
     bilan = Bilan()
     contexte: dict[str, object] = {}
 
-    print("Preuve  : %s" % arguments.proof)
+    dis("Preuve  : %s" % arguments.proof)
     if not arguments.proof.is_file():
         bilan.dire(FAIL, INTITULE_LISIBLE, "%s introuvable" % arguments.proof,
                    requis=True)
         return bilan, contexte
     octets = arguments.proof.read_bytes()
-    print("empreinte de la preuve : %s" % hashlib.sha256(octets).hexdigest())
-    print("sujet   : %s\n" % (arguments.subject or "non fourni"))
+    dis("empreinte de la preuve : %s" % hashlib.sha256(octets).hexdigest())
+    dis("sujet   : %s\n" % (arguments.subject or "non fourni"))
 
     try:
         engagee = empreinte_engagee(octets)
@@ -482,30 +565,30 @@ def verifier(arguments: argparse.Namespace) -> tuple[Bilan, dict]:
 
 
 def rendre(bilan: Bilan, contexte: dict, arguments: argparse.Namespace) -> int:
-    print("\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
+    dis("\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
           % (bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED)))
 
     attestations = contexte.get("attestations") or []
     confirmee = any(a["kind"] == "bitcoin" for a in attestations)
     if bilan.compte(FAIL):
-        print("Cette preuve ne doit pas etre presentee comme verifiee.")
+        dis("Cette preuve ne doit pas etre presentee comme verifiee.")
     elif confirmee:
-        print("La preuve s engage sur le sujet, et porte une attestation Bitcoin.")
-        print("Le TEMPS qu elle revendique reste a verifier avec `ots verify`.")
+        dis("La preuve s engage sur le sujet, et porte une attestation Bitcoin.")
+        dis("Le TEMPS qu elle revendique reste a verifier avec `ots verify`.")
     else:
-        print("La liaison est etablie. Le TEMPS ne l est PAS : la preuve est")
-        print("PENDING, ce qui n atteste aucune date.")
+        dis("La liaison est etablie. Le TEMPS ne l est PAS : la preuve est")
+        dis("PENDING, ce qui n atteste aucune date.")
 
     manquantes = bilan.requises_non_demontrees()
     if arguments.strict:
         if manquantes:
-            print("\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
+            dis("\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
                   % len(manquantes))
             for m in manquantes:
-                print("  - %s" % m)
-            print("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
+                dis("  - %s" % m)
+            dis("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
         else:
-            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+            dis("\nMODE STRICT : toutes les garanties requises sont demontrees.")
 
     if arguments.json:
         rapport = {
@@ -536,7 +619,7 @@ def rendre(bilan: Bilan, contexte: dict, arguments: argparse.Namespace) -> int:
         arguments.json.write_text(
             json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        print("\nrapport lisible par machine : %s" % arguments.json)
+        dis("\nrapport lisible par machine : %s" % arguments.json)
 
     return bilan.code_de_sortie(arguments.strict)
 
@@ -587,8 +670,8 @@ def upgrade(arguments: argparse.Namespace) -> int:
         ) from erreur
 
     relu = DetachedTimestampFile.deserialize(BytesDeserializationContext(octets))
-    print("Preuve      : %s" % arguments.proof)
-    print("engagee sur : %s\n" % engagee)
+    dis("Preuve      : %s" % arguments.proof)
+    dis("engagee sur : %s\n" % engagee)
 
     def confirmees(arbre) -> int:
         return sum(1 for _, a in arbre.all_attestations()
@@ -606,13 +689,13 @@ def upgrade(arguments: argparse.Namespace) -> int:
                     sous.msg, timeout=arguments.timeout
                 )
             except Exception as erreur:  # noqa: BLE001 - pas encore confirmee
-                print("[%-10s] %s -- %s" % ("EN ATTENTE", url, type(erreur).__name__))
+                dis("[%-10s] %s -- %s" % ("EN ATTENTE", url, type(erreur).__name__))
                 continue
             # La reponse porte le MEME message que ce sous-arbre : elle se
             # fusionne la, et nulle part ailleurs.
             sous.merge(achevee)
             progresse += 1
-            print("[%-10s] %s" % ("ACHEVEE", url))
+            dis("[%-10s] %s" % ("ACHEVEE", url))
 
     apres = confirmees(relu.timestamp)
     contexte = BytesSerializationContext()
@@ -620,9 +703,9 @@ def upgrade(arguments: argparse.Namespace) -> int:
     arguments.out.parent.mkdir(parents=True, exist_ok=True)
     arguments.out.write_bytes(contexte.getbytes())
 
-    print("\nnouvelle preuve : %s" % arguments.out)
-    print("attestations Bitcoin : %d avant, %d apres" % (avant, apres))
-    print("l ancienne preuve est INTACTE : %s" % arguments.proof)
+    dis("\nnouvelle preuve : %s" % arguments.out)
+    dis("attestations Bitcoin : %d avant, %d apres" % (avant, apres))
+    dis("l ancienne preuve est INTACTE : %s" % arguments.proof)
 
     # Le descripteur de la NOUVELLE preuve. Sans lui elle n est pas
     # verifiable : `verify` compare `proof_sha256` a l empreinte du
@@ -653,18 +736,18 @@ def upgrade(arguments: argparse.Namespace) -> int:
             (json.dumps(descripteur, ensure_ascii=False, indent=2,
                         sort_keys=True) + "\n").encode("utf-8")
         )
-        print("descripteur     : %s" % chemin_d)
-        print("  upgraded_from : %s" % descripteur["upgraded_from"])
+        dis("descripteur     : %s" % chemin_d)
+        dis("  upgraded_from : %s" % descripteur["upgraded_from"])
     if apres == avant:
-        print()
-        print("Rien n a progresse : la transaction n est probablement pas encore")
-        print("confirmee par la chaine. Reessayer plus tard. Tant qu aucune")
-        print("attestation Bitcoin n apparait, **aucune date n est attestee.**")
+        dis()
+        dis("Rien n a progresse : la transaction n est probablement pas encore")
+        dis("confirmee par la chaine. Reessayer plus tard. Tant qu aucune")
+        dis("attestation Bitcoin n apparait, **aucune date n est attestee.**")
     else:
-        print()
-        print("La preuve porte desormais une attestation Bitcoin. Le TEMPS qu elle")
-        print("revendique reste a verifier avec le client officiel :")
-        print("  ots verify %s" % arguments.out.name)
+        dis()
+        dis("La preuve porte desormais une attestation Bitcoin. Le TEMPS qu elle")
+        dis("revendique reste a verifier avec le client officiel :")
+        dis("  ots verify %s" % arguments.out.name)
     return 0
 
 
@@ -675,9 +758,10 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(
         description="Horodatage independant par OpenTimestamps, preuve detachee."
     )
+    _PARENT = _parent_langue()
     sous = analyseur.add_subparsers(dest="commande", required=True)
 
-    s = sous.add_parser("stamp", help="horodater l empreinte d un sujet (RESEAU)")
+    s = sous.add_parser("stamp", parents=[_PARENT], help="horodater l empreinte d un sujet (RESEAU)")
     s.add_argument("subject", type=Path)
     s.add_argument("--out", type=Path, default=None)
     s.add_argument("--descriptor", type=Path, default=None)
@@ -690,10 +774,10 @@ def main() -> int:
                    help="calendrier a interroger ; defaut : les quatre publics")
     s.add_argument("--timeout", type=int, default=15)
 
-    i = sous.add_parser("inspect", help="lire une preuve, hors ligne")
+    i = sous.add_parser("inspect", parents=[_PARENT], help="lire une preuve, hors ligne")
     i.add_argument("proof", type=Path)
 
-    v = sous.add_parser("verify", help="verifier la liaison, hors ligne")
+    v = sous.add_parser("verify", parents=[_PARENT], help="verifier la liaison, hors ligne")
     v.add_argument("proof", type=Path)
     v.add_argument("--subject", type=Path, default=None,
                    help="le fichier horodate, pour eprouver la liaison")
@@ -703,7 +787,7 @@ def main() -> int:
                    help="sortir en code 2 si une garantie REQUISE n est pas demontree. "
                         "Ne change AUCUN verdict.")
 
-    u = sous.add_parser("upgrade", help="demander l attestation achevee (RESEAU)")
+    u = sous.add_parser("upgrade", parents=[_PARENT], help="demander l attestation achevee (RESEAU)")
     u.add_argument("proof", type=Path)
     u.add_argument("--out", type=Path, required=True)
     u.add_argument("--force", action="store_true",
@@ -715,6 +799,7 @@ def main() -> int:
     u.add_argument("--timeout", type=int, default=15)
 
     arguments = analyseur.parse_args()
+    _pose_langue(arguments)
     try:
         if arguments.commande == "stamp":
             return stamp(arguments)
@@ -725,10 +810,10 @@ def main() -> int:
         bilan, contexte = verifier(arguments)
         return rendre(bilan, contexte, arguments)
     except Illisible as erreur:
-        print("[%-10s] %s" % (FAIL, erreur))
+        dis("[%-10s] %s" % (FAIL, erreur))
         return 1
     except OSError as erreur:
-        print("[%-10s] %s" % (FAIL, erreur))
+        dis("[%-10s] %s" % (FAIL, erreur))
         return 1
 
 

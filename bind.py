@@ -48,6 +48,80 @@ import sys
 import zipfile
 from pathlib import Path
 
+
+# ---------------------------------------------------------------------------
+# La langue de la PROSE. Optionnelle, et volontairement : sans `i18n.py` a
+# cote, cet outil tourne et rend exactement les memes verdicts, en francais.
+# Les controles ne doivent jamais dependre de la couche de traduction.
+# ---------------------------------------------------------------------------
+try:
+    import i18n
+except ImportError:  # pragma: no cover - chemin de degradation
+    class i18n:  # type: ignore[no-redef]
+        """Repli sans traduction. Rend tout tel quel."""
+
+        FR = "fr"
+        EN = "en"
+
+        @staticmethod
+        def traduire(texte: str, langue: str) -> str:
+            return texte
+
+        @staticmethod
+        def traduire_format(format_fr: str, langue: str) -> str:
+            return format_fr
+
+
+#: La langue d affichage, posee une fois par `main`. Une cellule plutot
+#: qu un parametre : il y a 29 appels a `dis` dans ce fichier, et les
+#: renommer se relit, leur ajouter un argument non.
+_LANGUE = [i18n.FR]
+
+
+def dis(*morceaux: object) -> None:
+    """Imprime de la prose, dans la langue courante.
+
+    Seul le FORMAT est traduit. Les arguments -- empreintes, decomptes,
+    noms de fichiers, etiquettes venues d un recu tiers -- traversent
+    VERBATIM : les traduire les abimerait.
+    """
+    if not morceaux:
+        print()
+        return
+    premier = morceaux[0]
+    if isinstance(premier, str):
+        # DEUX formes d appel coexistent dans ce depot :
+        #   dis("x : %s", valeur)      -> `premier` est un FORMAT
+        #   dis("x : %s" % valeur)     -> `premier` est DEJA rendu
+        # La premiere se traduit par recherche exacte du format ; la
+        # seconde par le moteur a motifs, qui en extrait les arguments.
+        # Sans ce repli, toute la prose construite par `%` sortait en
+        # francais -- et c est la forme majoritaire ici.
+        pose = i18n.traduire_format(premier, _LANGUE[0])
+        if pose == premier:
+            pose = i18n.traduire(premier, _LANGUE[0])
+        premier = pose
+    print(premier, *morceaux[1:])
+
+
+def _pose_langue(arguments: "argparse.Namespace") -> None:
+    """Pose la langue depuis les arguments, si l outil en expose une."""
+    _LANGUE[0] = getattr(arguments, "lang", i18n.FR) or i18n.FR
+
+#: `--lang` est declare sur un analyseur PARENT, pour qu il s ecrive apres
+#: la sous-commande -- `verify <fichier> --lang en` -- qui est la facon dont
+#: on l ecrit naturellement.
+def _parent_langue() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--lang",
+        choices=("fr", "en"),
+        default="fr",
+        help="langue de la PROSE. Ne change aucun verdict, aucun code de "
+             "sortie, aucun nom de champ et aucune empreinte.",
+    )
+    return parent
+
 SCHEMA = "neomundi.evidence.manifest/1"
 
 PASS, FAIL, NOT_TESTED = "PASS", "FAIL", "NOT TESTED"
@@ -325,22 +399,22 @@ def construire(arguments: argparse.Namespace) -> int:
         # LF explicite : un manifeste de liaison peut etre atteste a son
         # tour, et son empreinte ne doit pas dependre du systeme.
         arguments.out.write_bytes(sortie.encode("utf-8"))
-        print("manifeste ecrit : %s" % arguments.out)
-        print("empreinte        : %s" % sha256(sortie.encode("utf-8")))
+        dis("manifeste ecrit : %s" % arguments.out)
+        dis("empreinte        : %s" % sha256(sortie.encode("utf-8")))
     else:
         sys.stdout.write(sortie)
 
-    print()
-    print("%d artefact(s), %d empreinte(s) declaree(s) par l enregistrement."
+    dis()
+    dis("%d artefact(s), %d empreinte(s) declaree(s) par l enregistrement."
           % (len(artefacts), len(empreintes)))
     lies = sum(1 for a in artefacts if a["claimed_assurance"] == REFERENCE)
-    print("%d artefact(s) se hachent sur une empreinte de l enregistrement." % lies)
+    dis("%d artefact(s) se hachent sur une empreinte de l enregistrement." % lies)
     if lies != len(artefacts):
-        print("Les autres restent au niveau `declared` : aucun ancrage ne les tient.")
-    print()
-    print("Rappel : une correspondance d empreinte dit que le fichier est celui")
-    print("auquel l enregistrement se refere. Elle ne dit pas que l execution a")
-    print("eu lieu. Verifier avec : python bind.py verify <manifeste>")
+        dis("Les autres restent au niveau `declared` : aucun ancrage ne les tient.")
+    dis()
+    dis("Rappel : une correspondance d empreinte dit que le fichier est celui")
+    dis("auquel l enregistrement se refere. Elle ne dit pas que l execution a")
+    dis("eu lieu. Verifier avec : python bind.py verify <manifeste>")
     return 0
 
 
@@ -353,7 +427,11 @@ class Bilan:
     """Les lignes de controle, et rien d autre. PASS, FAIL et NOT TESTED
     restent distincts : aucun n absorbe les autres."""
 
-    def __init__(self) -> None:
+    def __init__(self, langue: str | None = None) -> None:
+        #: La langue d AFFICHAGE. `self.lignes` stocke toujours
+        #: le francais : c est ce qui garantit que le mode strict,
+        #: les codes de sortie et le rapport JSON n en dependent pas.
+        self.langue = langue or _LANGUE[0]
         self.lignes: list[tuple[str, str, str]] = []
         #: Index des lignes dont le NOT TESTED est CONTINGENT -- celles qui
         #: deviendraient PASS si l appelant fournissait ce qui manque. On
@@ -370,7 +448,12 @@ class Bilan:
         if requis:
             self.requis.append(len(self.lignes))
         self.lignes.append((etat, intitule, detail))
-        print("[%-10s] %s%s" % (etat, intitule, " - " + detail if detail else ""))
+        # L etat n est JAMAIS traduit : les trois sont des termes du
+        # contrat. Seules la prose de l intitule et celle du detail
+        # changent de langue.
+        vu = i18n.traduire(intitule, self.langue)
+        vu_detail = i18n.traduire(detail, self.langue)
+        print("[%-10s] %s%s" % (etat, vu, " - " + vu_detail if vu_detail else ""))
 
     def requises_non_demontrees(self) -> list[str]:
         """Les garanties requises qui ne sont pas `PASS`."""
@@ -728,7 +811,7 @@ def controle_attestation(bilan: Bilan, verdicts: list[dict],
 
     # Le verificateur d attestation ecrit sur la sortie standard : on le
     # laisse parler, c est son rapport, et le lecteur a besoin de le voir.
-    print("\n--- verification de l attestation du sujet ---")
+    dis("\n--- verification de l attestation du sujet ---")
     # La fabrique du verificateur, et non un Namespace rebati ici : c est ce
     # qui a casse une fois, en silence, quand une option a ete ajoutee.
     sous_arguments = verify_attestation.arguments_de_verification(
@@ -738,7 +821,7 @@ def controle_attestation(bilan: Bilan, verdicts: list[dict],
         allow_test_keys=arguments.allow_test_keys,
     )
     sous_bilan, niveau, _ = verify_attestation.verifier(sous_arguments)
-    print("--- fin de la verification de l attestation ---\n")
+    dis("--- fin de la verification de l attestation ---\n")
 
     if niveau != verify_attestation.ATTESTE:
         bilan.dire(
@@ -892,12 +975,12 @@ def verifier(arguments: argparse.Namespace) -> int:
     manifeste_chemin = arguments.manifest
     racine = arguments.root or manifeste_chemin.parent
 
-    print("Manifeste de preuve : %s" % manifeste_chemin)
+    dis("Manifeste de preuve : %s" % manifeste_chemin)
     if not manifeste_chemin.is_file():
         bilan.dire(FAIL, "manifeste lisible", "%s introuvable" % manifeste_chemin)
         return rendre(bilan, [], DECLARE, arguments)
-    print("empreinte           : %s" % sha256_fichier(manifeste_chemin))
-    print("racine des artefacts: %s\n" % racine)
+    dis("empreinte           : %s" % sha256_fichier(manifeste_chemin))
+    dis("racine des artefacts: %s\n" % racine)
 
     try:
         manifeste = objet_json(manifeste_chemin.read_bytes(), "le manifeste")
@@ -948,18 +1031,18 @@ def verifier(arguments: argparse.Namespace) -> int:
 
 
 def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.Namespace) -> int:
-    print(
+    dis(
         "\nBILAN : %d PASS, %d FAIL, %d NOT TESTED"
         % (bilan.compte(PASS), bilan.compte(FAIL), bilan.compte(NOT_TESTED))
     )
     if bilan.compte(FAIL):
-        print("Cette liaison ne doit pas etre presentee comme verifiee.")
+        dis("Cette liaison ne doit pas etre presentee comme verifiee.")
         niveau_effectif = None
     else:
         niveau_effectif = niveau
-        print("Niveau de garantie DERIVE pour la liaison : %s" % niveau)
+        dis("Niveau de garantie DERIVE pour la liaison : %s" % niveau)
         if niveau == ATTESTE:
-            print(
+            dis(
                 "Soit : les artefacts offerts sont ceux auxquels l enregistrement\n"
                 "se refere, ET une partie identifiee s est engagee sur l empreinte\n"
                 "de l archive qui les declare. Ce n est toujours pas une preuve que\n"
@@ -967,7 +1050,7 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
                 "declaree faute d ancrage tiers."
             )
         elif niveau == REFERENCE:
-            print(
+            dis(
                 "Soit : les artefacts offerts sont bien ceux auxquels\n"
                 "l enregistrement se refere. Ce n est pas une preuve que\n"
                 "l execution a eu lieu."
@@ -975,14 +1058,14 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
         elif niveau == DECLARE:
             absents = [v for v in verdicts if not v.get("verifiable_here", True)]
             if absents:
-                print(
+                dis(
                     "Soit : %d artefact(s) sur %d n ont pas pu etre eprouves ici,\n"
                     "donc la liaison entiere retombe au niveau declaratif. Ce n est\n"
                     "pas un refus du manifeste : c est une verification incomplete."
                     % (len(absents), len(verdicts))
                 )
             else:
-                print(
+                dis(
                     "Soit : rien n a pu etre ancre dans l enregistrement. Le\n"
                     "manifeste est un document, pas une preuve."
                 )
@@ -990,15 +1073,15 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
     manquantes = bilan.requises_non_demontrees()
     if arguments.strict:
         if manquantes:
-            print(
+            dis(
                 "\nMODE STRICT : %d garantie(s) requise(s) non demontree(s) :"
                 % len(manquantes)
             )
             for m in manquantes:
-                print("  - %s" % m)
-            print("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
+                dis("  - %s" % m)
+            dis("Aucun verdict n a change : seul le code de sortie en tient compte (2).")
         else:
-            print("\nMODE STRICT : toutes les garanties requises sont demontrees.")
+            dis("\nMODE STRICT : toutes les garanties requises sont demontrees.")
 
     if arguments.json:
         rapport = {
@@ -1034,7 +1117,7 @@ def rendre(bilan: Bilan, verdicts: list[dict], niveau: str, arguments: argparse.
         chemin.write_text(
             json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        print("\nrapport lisible par machine : %s" % chemin)
+        dis("\nrapport lisible par machine : %s" % chemin)
 
     return bilan.code_de_sortie(arguments.strict)
 
@@ -1046,9 +1129,10 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(
         description="Lie une observation NeoMundi a des artefacts externes, et verifie la liaison."
     )
+    _PARENT = _parent_langue()
     sous = analyseur.add_subparsers(dest="commande", required=True)
 
-    b = sous.add_parser("build", help="construire un manifeste de preuve")
+    b = sous.add_parser("build", parents=[_PARENT], help="construire un manifeste de preuve")
     b.add_argument("--archive", type=Path, required=True, help="archive Evidence du sujet")
     b.add_argument("--observation", required=True, help="observation_id du sujet")
     b.add_argument(
@@ -1072,7 +1156,7 @@ def main() -> int:
     )
     b.add_argument("--out", type=Path, default=None, help="fichier de sortie ; defaut : la sortie standard")
 
-    v = sous.add_parser("verify", help="verifier un manifeste de preuve")
+    v = sous.add_parser("verify", parents=[_PARENT], help="verifier un manifeste de preuve")
     v.add_argument("manifest", type=Path, help="le manifeste a verifier")
     v.add_argument(
         "--root", type=Path, default=None,
@@ -1115,12 +1199,13 @@ def main() -> int:
     )
 
     arguments = analyseur.parse_args()
+    _pose_langue(arguments)
     try:
         if arguments.commande == "build":
             return construire(arguments)
         return verifier(arguments)
     except Illisible as erreur:
-        print("[%-10s] %s" % (FAIL, erreur))
+        dis("[%-10s] %s" % (FAIL, erreur))
         return 1
 
 
