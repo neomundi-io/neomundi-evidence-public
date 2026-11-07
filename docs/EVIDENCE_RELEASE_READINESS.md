@@ -27,8 +27,6 @@ be false:
 | **Temporal anchoring** | IMPLEMENTED and TESTED; the shipped proof is **`PENDING`** — no date attested, no eIDAS qualification |
 | **Q-2** | global verdict **`PARTIAL`**, and it stays so |
 
-And one documentation gap: the six new documents have **no `.fr.md`
-counterpart** in a repository that is bilingual by convention.
 
 ## 2. Why not NOT READY
 
@@ -40,13 +38,15 @@ counterpart** in a repository that is bilingual by convention.
 | Results traceable | **yes** — identifiers, digests and controls mapped |
 | Reservations explicit | **yes** — a dedicated document, nothing softened |
 | Relevant tests run | **yes** — the CI sequence replayed locally |
-| Documents coherent | **yes** — six entry points, no duplication |
+| Documents coherent | **yes** — six entry points, in both languages |
 | Historical qualifications intact | **yes** — Q-1 20/20, Q-2 13/13, manifests unchanged |
 | Decision justified | **this document** |
 
-**One failure occurred and was diagnosed**: `test_binding` was a **procedure**
-error on my side — the CI builds the binding manifest first. No success
-criterion was altered to obtain a `PASS`.
+**Two failures occurred and were diagnosed**: `test_binding` was a
+**procedure** error on my side — the CI builds the binding manifest first —
+and the first push, shipped English-only, was **refused by the CI**, which
+enforces the EN/FR pair. The six counterparts were written. **No success
+criterion was altered**, and the CI's exception list was not widened.
 
 ---
 
@@ -77,19 +77,18 @@ qualification · no **legal certification** — `experimental` is the opposite o
 
 ## 5. Recommended follow-ups, in order
 
-1. **produce the `.fr.md` counterparts** — convention, and the cheapest item;
-2. **resolve the divergence** between `test_falsification.py` and scenario D:
+1. **resolve the divergence** between `test_falsification.py` and scenario D:
    say how the two forgers differ, or align them;
-3. **ingest one real third-party package**, and one real receipt — that is what
+2. **ingest one real third-party package**, and one real receipt — that is what
    moves two capabilities from TESTED to QUALIFIED;
-4. **upgrade the timestamp proof** once the chain has confirmed, then re-run
+3. **upgrade the timestamp proof** once the chain has confirmed, then re-run
    `timestamp.py upgrade` and `verify --strict`: a `PENDING` that becomes a
    Bitcoin attestation is the single largest gain available;
-5. **declare the export completeness contract** —
+4. **declare the export completeness contract** —
    `registre.enregistrements_exportes` and `registre.types_exclus` — which
    closes one of the three structural `NOT TESTED`.
 
-None of the five blocks a release. The fourth is the only one that would
+None of the four blocks a release. The third is the only one that would
 change what the product **establishes**, rather than what it documents.
 
 ---

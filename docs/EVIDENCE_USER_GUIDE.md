@@ -416,6 +416,6 @@ Three orders of conclusion, never to be merged:
 | Third-party submission | [SUBMISSION.md](SUBMISSION.md) |
 | Verifying from an outside digest | [EXTERNAL_REFERENCE.md](EXTERNAL_REFERENCE.md) |
 
-**French counterpart**: this guide has no `.fr.md` pair yet. The repository is
-bilingual by convention (30 `.fr.md` files), and the pairing is a **declared
-follow-up**, recorded in the validation report.
+**French counterpart**: [EVIDENCE_USER_GUIDE.fr.md](EVIDENCE_USER_GUIDE.fr.md).
+Every document in this repository exists in both languages — the CI enforces
+it on `docs/*.md`.

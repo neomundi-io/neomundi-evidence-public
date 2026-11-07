@@ -316,10 +316,8 @@ publisher.
 | [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md) | the 5 November consolidation: what changed, and the nine answers |
 | [`docs/FUTURE_SITE.md`](docs/FUTURE_SITE.md) | the planned architecture of the product site — not built, not deployed |
 
-Each document exists in English and in French (`*.fr.md`) — **except the
-six consolidated entry points above**, which are English-only for now.
-Their French counterparts are a declared follow-up, recorded in
-[`docs/EVIDENCE_VALIDATION_REPORT.md`](docs/EVIDENCE_VALIDATION_REPORT.md) §7.
+Each document exists in English and in French (`*.fr.md`) — the CI enforces
+the pairing on every file under `docs/`.
 
 ---
 

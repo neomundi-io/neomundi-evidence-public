@@ -146,7 +146,7 @@ of 59 claims is intact, and identifier traceability is preserved.
 | | |
 |---|---|
 | Product code modified | **none** |
-| Documents added | 6, under `docs/` |
+| Documents added | **12** under `docs/` — six English, six French |
 | Stray files left behind | **none** — the refused key was never written |
 | Pre-existing untracked directory | `reports/oda3-mukesh-2026-11-06/` — **not touched** |
 
@@ -154,16 +154,24 @@ of 59 claims is intact, and identifier traceability is preserved.
 
 ## 7. Reservations
 
-1. **No `.fr.md` counterparts.** The repository is bilingual by convention
-   (30 French files). The six new documents are English-only; the pairing is a
-   **declared follow-up**, not an oversight.
-2. **Two capabilities remain NOT CONFIRMED** in real conditions: third-party
+1. **Two capabilities remain NOT CONFIRMED** in real conditions: third-party
    ingestion and reconciliation.
-3. **The timestamp proof is `PENDING`** — no date is attested, and no
+2. **The timestamp proof is `PENDING`** — no date is attested, and no
    attestation of this project carries an anchor.
-4. **Q-2 remains `PARTIAL`.** Nothing in this work changes that, and nothing
+3. **Q-2 remains `PARTIAL`.** Nothing in this work changes that, and nothing
    was attempted in that direction.
-5. **Case G stays undetectable**, and is published as a ceiling.
-6. **One divergence is unresolved**: `test_falsification.py` reports an
+4. **Case G stays undetectable**, and is published as a ceiling.
+5. **One divergence is unresolved**: `test_falsification.py` reports an
    amputation as detected where scenario D shows it undetected. The two forgers
    differ in thoroughness and the documentation does not yet say how.
+
+### A procedural lesson, recorded
+
+The first push of this batch shipped **English only**, declaring the French
+counterpart a "follow-up". **The CI refused it**: the `discipline du depot`
+job enforces the EN/FR pair on every `docs/*.md`, with two named exceptions
+that did not apply.
+
+**It was a gate, not a tolerant convention.** The six counterparts were
+written rather than adding these files to the exception list — which would
+have weakened the gate for a reason that was not one.
