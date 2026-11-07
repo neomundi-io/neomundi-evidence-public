@@ -274,6 +274,19 @@ publisher.
 
 ## Documentation
 
+### Start here — the six consolidated entry points
+
+| | |
+|---|---|
+| [`docs/EVIDENCE_USER_GUIDE.md`](docs/EVIDENCE_USER_GUIDE.md) | **the user guide** — the twelve operations, their exact commands, exit codes and limits |
+| [`docs/EVIDENCE_TECHNICAL_DEMO.md`](docs/EVIDENCE_TECHNICAL_DEMO.md) | the reproducible demonstration — six scenarios, with the codes observed |
+| [`docs/EVIDENCE_TRACEABILITY.md`](docs/EVIDENCE_TRACEABILITY.md) | how an artefact travels, and the six layers never to be conflated |
+| [`docs/EVIDENCE_LIMITATIONS.md`](docs/EVIDENCE_LIMITATIONS.md) | what is **not** established — read this one first if you are auditing |
+| [`docs/EVIDENCE_VALIDATION_REPORT.md`](docs/EVIDENCE_VALIDATION_REPORT.md) | tests run, results, and reservations |
+| [`docs/EVIDENCE_RELEASE_READINESS.md`](docs/EVIDENCE_RELEASE_READINESS.md) | the release decision, and what a release may and may not claim |
+
+### Reference, by subject
+
 | | |
 |---|---|
 | [`docs/DEMO_SCRIPT_5MIN.md`](docs/DEMO_SCRIPT_5MIN.md) | the five-minute demo, with measured durations |
@@ -303,7 +316,8 @@ publisher.
 | [`docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md`](docs/EVIDENCE_CONSOLIDATION_REPORT_2026-11-05.md) | the 5 November consolidation: what changed, and the nine answers |
 | [`docs/FUTURE_SITE.md`](docs/FUTURE_SITE.md) | the planned architecture of the product site — not built, not deployed |
 
-Each document exists in English and in French (`*.fr.md`).
+Each document exists in English and in French (`*.fr.md`) — the CI enforces
+the pairing on every file under `docs/`.
 
 ---
 
